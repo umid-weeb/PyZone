@@ -24,6 +24,13 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer(auto_error=False)
 
 
+def normalize_password(password: str) -> str:
+    """
+    bcrypt accepts up to 72 bytes. Truncate to 72 characters (safe for typical UTF-8).
+    """
+    return (password or "")[:72]
+
+
 class RegisterRequest(BaseModel):
     username: str = Field(min_length=3, max_length=50)
     password: str = Field(min_length=6, max_length=128)
@@ -48,11 +55,11 @@ class MeResponse(BaseModel):
 
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    return pwd_context.hash(normalize_password(password))
 
 
 def verify_password(password: str, hashed: str) -> bool:
-    return pwd_context.verify(password, hashed)
+    return pwd_context.verify(normalize_password(password), hashed)
 
 
 def create_access_token(subject: str) -> str:
