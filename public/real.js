@@ -5,6 +5,10 @@ let defaultCode = "";
 let activeErrorLineNumber = null;
 let activeErrorTextMarker = null;
 let activeRunSession = null;
+let activeDebugSession = null;
+let activeDebugLineNumber = null;
+let activeDebugSteps = [];
+let activeDebugStepIndex = 0;
 let pythonFormatterReady = false;
 
 const INDENT_SIZE = 4;
@@ -12,9 +16,15 @@ const EDITOR_FONT_FAMILIES = {
   "IBM Plex Mono": '"IBM Plex Mono", monospace',
   "JetBrains Mono": '"JetBrains Mono", monospace',
   "Fira Code": '"Fira Code", monospace',
+  "Victor Mono": '"Victor Mono", monospace',
+  Inconsolata: '"Inconsolata", monospace',
+  "Azeret Mono": '"Azeret Mono", monospace',
   "Source Code Pro": '"Source Code Pro", monospace',
   "Roboto Mono": '"Roboto Mono", monospace',
   "Space Mono": '"Space Mono", monospace',
+  "Ubuntu Mono": '"Ubuntu Mono", monospace',
+  "Courier Prime": '"Courier Prime", monospace',
+  "Anonymous Pro": '"Anonymous Pro", monospace',
 };
 const EDITOR_FONT_SIZES = new Set([
   "12px",
@@ -27,6 +37,7 @@ const EDITOR_FONT_SIZES = new Set([
 ]);
 const DEFAULT_EDITOR_FONT_FAMILY = "IBM Plex Mono";
 const DEFAULT_EDITOR_FONT_SIZE = "14px";
+const DEBUG_MAX_STEPS = 420;
 
 const PYTHON_KEYWORDS = [
   "False",
@@ -975,6 +986,1428 @@ function buildExecutionErrorReport(resultObj, code, executionTime) {
     focusToken: undefinedName || suggestion || null,
   };
 }
+
+async function setupSafeExecutionEnvironment() {
+  const pyodideVersion = pyodide.version;
+  if (!pyodideVersion || parseFloat(pyodideVersion) < 0.23) {
+    console.warn(
+      "Pyodide versiyasi eski. Ba'zi funksiyalar ishlamasligi mumkin."
+    );
+  }
+
+  await pyodide.runPythonAsync(`
+import sys
+import ast
+import builtins
+import traceback
+from io import StringIO
+import time
+
+try:
+    import autopep8
+except Exception:
+    autopep8 = None
+
+class LoopIterationError(Exception):
+    pass
+
+class AwaitingInput(Exception):
+    def __init__(self, prompt="", input_index=0):
+        super().__init__(prompt)
+        self.prompt = prompt or ""
+        self.input_index = input_index
+
+class LoopTransformer(ast.NodeTransformer):
+    def visit_For(self, node):
+        self.generic_visit(node)
+        guard_call = ast.Expr(
+            value=ast.Call(
+                func=ast.Name(id="_check_execution_time", ctx=ast.Load()),
+                args=[],
+                keywords=[]
+            )
+        )
+        ast.copy_location(guard_call, node)
+        node.body.insert(0, guard_call)
+        return node
+
+    def visit_While(self, node):
+        self.generic_visit(node)
+        guard_call = ast.Expr(
+            value=ast.Call(
+                func=ast.Name(id="_check_execution_time", ctx=ast.Load()),
+                args=[],
+                keywords=[]
+            )
+        )
+        ast.copy_location(guard_call, node)
+        node.body.insert(0, guard_call)
+        return node
+
+def _safe_repr(value, limit=140):
+    try:
+        rendered = repr(value)
+    except Exception:
+        rendered = f"<{type(value).__name__}>"
+
+    if len(rendered) > limit:
+        rendered = rendered[: limit - 3] + "..."
+    return rendered
+
+def _serialize_scope(scope):
+    serialized = []
+
+    for name in sorted(scope):
+        if str(name).startswith("__") or name == "_check_execution_time":
+            continue
+
+        try:
+            value = scope[name]
+        except Exception:
+            continue
+
+        serialized.append(
+            {
+                "name": str(name),
+                "type": type(value).__name__,
+                "value": _safe_repr(value),
+            }
+        )
+
+        if len(serialized) >= 18:
+            break
+
+    return serialized
+
+class SafeExecutor:
+    def __init__(self, max_execution_time=5):
+        self.max_execution_time = max_execution_time
+        self.start_time = None
+
+    def compile_code(self, code):
+        tree = ast.parse(code, filename="<user_code>", mode="exec")
+        transformer = LoopTransformer()
+        new_tree = transformer.visit(tree)
+        ast.fix_missing_locations(new_tree)
+        return compile(new_tree, filename="<user_code>", mode="exec")
+
+    def compile_debug_code(self, code):
+        prepared = str(code).replace("\\r\\n", "\\n")
+        return compile(prepared, filename="<user_code>", mode="exec")
+
+    def _serialize_error(self, error):
+        traceback_summary = traceback.extract_tb(error.__traceback__)
+        user_frame = None
+
+        for frame in reversed(traceback_summary):
+            if frame.filename == "<user_code>":
+                user_frame = frame
+                break
+
+        line_number = getattr(error, "lineno", None)
+        column_number = getattr(error, "offset", None)
+        code_line = getattr(error, "text", None)
+
+        if user_frame is not None:
+            if line_number is None:
+                line_number = user_frame.lineno
+            if not code_line:
+                code_line = user_frame.line
+
+        serialized = {
+            "type": error.__class__.__name__,
+            "message": str(error),
+            "line": line_number,
+            "column": column_number,
+            "codeLine": code_line.strip("\\n") if isinstance(code_line, str) else code_line,
+            "undefinedName": getattr(error, "name", None),
+            "traceback": "".join(traceback.format_exception(type(error), error, error.__traceback__)),
+        }
+
+        if isinstance(error, AwaitingInput):
+            serialized["prompt"] = error.prompt
+            serialized["inputIndex"] = error.input_index
+
+        return serialized
+
+    def _check_execution_time(self):
+        if time.time() - self.start_time > self.max_execution_time:
+            raise LoopIterationError("Loop execution time exceeded the limit!")
+
+    def _create_input_handler(self, provided_inputs=None):
+        provided_inputs = [
+            "" if value is None else str(value)
+            for value in (provided_inputs or [])
+        ]
+        consumed_inputs = 0
+
+        def managed_input(prompt=""):
+            nonlocal consumed_inputs
+            prompt_text = "" if prompt is None else str(prompt)
+            if consumed_inputs >= len(provided_inputs):
+                raise AwaitingInput(prompt_text, consumed_inputs)
+            value = provided_inputs[consumed_inputs]
+            consumed_inputs += 1
+            return value
+
+        return managed_input
+
+    def execute(self, code, provided_inputs=None):
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        sys.stdout = StringIO()
+        sys.stderr = StringIO()
+        result = {
+            "output": "",
+            "success": True,
+            "awaitingInput": False,
+            "error": None,
+        }
+
+        try:
+            compiled_code = self.compile_code(code)
+            self.start_time = time.time()
+            exec_builtins = dict(vars(builtins))
+            exec_builtins["input"] = self._create_input_handler(provided_inputs)
+            exec_globals = {
+                "__builtins__": exec_builtins,
+                "__name__": "__main__",
+                "_check_execution_time": self._check_execution_time,
+            }
+            exec(compiled_code, exec_globals)
+        except AwaitingInput as error:
+            result["success"] = False
+            result["awaitingInput"] = True
+            result["error"] = self._serialize_error(error)
+        except BaseException as error:
+            result["success"] = False
+            result["error"] = self._serialize_error(error)
+        finally:
+            stdout_value = sys.stdout.getvalue().rstrip()
+            stderr_value = sys.stderr.getvalue().rstrip()
+            result["output"] = "\\n".join(
+                value for value in [stdout_value, stderr_value] if value
+            )
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+
+        return result
+
+    def debug(self, code, provided_inputs=None, breakpoint_lines=None, max_steps=400):
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        sys.stdout = StringIO()
+        sys.stderr = StringIO()
+        result = {
+            "output": "",
+            "success": True,
+            "awaitingInput": False,
+            "error": None,
+            "steps": [],
+            "stepLimitReached": False,
+            "breakpointLines": sorted(
+                {
+                    int(line)
+                    for line in (breakpoint_lines or [])
+                    if str(line).strip().isdigit() and int(line) > 0
+                }
+            ),
+        }
+        source_lines = str(code).replace("\\r\\n", "\\n").split("\\n")
+        breakpoint_set = set(result["breakpointLines"])
+
+        def trace_calls(frame, event, arg):
+            if frame.f_code.co_filename != "<user_code>":
+                return trace_calls
+
+            if time.time() - self.start_time > self.max_execution_time:
+                raise LoopIterationError("Loop execution time exceeded the limit!")
+
+            if event == "line":
+                line_number = frame.f_lineno
+                code_line = (
+                    source_lines[line_number - 1]
+                    if 0 < line_number <= len(source_lines)
+                    else ""
+                )
+                result["steps"].append(
+                    {
+                        "line": line_number,
+                        "function": frame.f_code.co_name,
+                        "codeLine": code_line,
+                        "locals": _serialize_scope(frame.f_locals),
+                        "isBreakpoint": line_number in breakpoint_set,
+                    }
+                )
+
+                if len(result["steps"]) >= max_steps:
+                    result["stepLimitReached"] = True
+                    sys.settrace(None)
+                    return None
+
+            return trace_calls
+
+        try:
+            compiled_code = self.compile_debug_code(code)
+            self.start_time = time.time()
+            exec_builtins = dict(vars(builtins))
+            exec_builtins["input"] = self._create_input_handler(provided_inputs)
+            exec_globals = {
+                "__builtins__": exec_builtins,
+                "__name__": "__main__",
+                "_check_execution_time": self._check_execution_time,
+            }
+            sys.settrace(trace_calls)
+            exec(compiled_code, exec_globals)
+        except AwaitingInput as error:
+            result["success"] = False
+            result["awaitingInput"] = True
+            result["error"] = self._serialize_error(error)
+        except BaseException as error:
+            result["success"] = False
+            result["error"] = self._serialize_error(error)
+        finally:
+            sys.settrace(None)
+            stdout_value = sys.stdout.getvalue().rstrip()
+            stderr_value = sys.stderr.getvalue().rstrip()
+            result["output"] = "\\n".join(
+                value for value in [stdout_value, stderr_value] if value
+            )
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+
+        return result
+
+_safe_executor = SafeExecutor(max_execution_time=5)
+
+def auto_fix_code(code):
+    prepared = str(code).replace("\\r\\n", "\\n").replace("\\t", "    ")
+    formatter_available = autopep8 is not None
+
+    if formatter_available:
+        try:
+            prepared = autopep8.fix_code(prepared)
+        except Exception:
+            formatter_available = False
+
+    return {
+        "code": prepared,
+        "formatterAvailable": formatter_available,
+    }
+
+def safe_execute(code, provided_inputs=None):
+    return _safe_executor.execute(code, provided_inputs)
+
+def debug_execute(code, provided_inputs=None, breakpoint_lines=None, max_steps=400):
+    return _safe_executor.debug(code, provided_inputs, breakpoint_lines, max_steps)
+  `);
+}
+
+function clearOutput() {
+  activeRunSession = null;
+  activeDebugSession = null;
+  clearEditorDiagnostics();
+  clearOutputInputHost();
+  clearDebugState();
+  showOutput('Natija tozalandi. Kodni yozing va "Run" tugmasini bosing.', "");
+}
+
+async function runCode() {
+  if (!pyodide) {
+    showOutput("Python hali yuklanmagan. Iltimos, kuting...", "error");
+    return;
+  }
+
+  const code = editor.getValue();
+  if (!code.trim()) {
+    showOutput("Kod kiritilmagan.", "error");
+    return;
+  }
+
+  const whitespaceIssue = findBlockingWhitespaceIssue(code);
+  if (whitespaceIssue) {
+    clearDebugState();
+    clearEditorDiagnostics();
+    highlightEditorError(
+      whitespaceIssue.lineNumber,
+      whitespaceIssue.columnNumber,
+      null
+    );
+    showOutput(buildWhitespaceIssueMessage(whitespaceIssue), "error");
+    return;
+  }
+
+  clearDebugState();
+  activeRunSession = {
+    code,
+    inputValues: [],
+  };
+  showOutput("Bajarilmoqda...", "");
+  clearOutputInputHost();
+  await continueRunSession(activeRunSession);
+}
+
+async function debugCode() {
+  if (!pyodide) {
+    showOutput("Python hali yuklanmagan. Iltimos, kuting...", "error");
+    return;
+  }
+
+  const code = editor.getValue();
+  if (!code.trim()) {
+    showOutput("Kod kiritilmagan.", "error");
+    return;
+  }
+
+  const whitespaceIssue = findBlockingWhitespaceIssue(code);
+  if (whitespaceIssue) {
+    clearDebugState();
+    clearEditorDiagnostics();
+    highlightEditorError(
+      whitespaceIssue.lineNumber,
+      whitespaceIssue.columnNumber,
+      null
+    );
+    showOutput(buildWhitespaceIssueMessage(whitespaceIssue), "error");
+    return;
+  }
+
+  clearDebugState();
+  activeDebugSession = {
+    code,
+    inputValues: [],
+    breakpoints: getBreakpointLines(),
+  };
+  showOutput("Debugger ishga tushirilmoqda...", "");
+  clearOutputInputHost();
+  await continueDebugSession(activeDebugSession);
+}
+
+function clearOutput() {
+  activeRunSession = null;
+  activeDebugSession = null;
+  clearEditorDiagnostics();
+  clearOutputInputHost();
+  clearDebugState();
+  showOutput('Natija tozalandi. Kodni yozing va "Run" tugmasini bosing.', "");
+}
+
+async function runCode() {
+  if (!pyodide) {
+    showOutput("Python hali yuklanmagan. Iltimos, kuting...", "error");
+    return;
+  }
+
+  const code = editor.getValue();
+  if (!code.trim()) {
+    showOutput("Kod kiritilmagan.", "error");
+    return;
+  }
+
+  const whitespaceIssue = findBlockingWhitespaceIssue(code);
+  if (whitespaceIssue) {
+    clearDebugState();
+    clearEditorDiagnostics();
+    highlightEditorError(
+      whitespaceIssue.lineNumber,
+      whitespaceIssue.columnNumber,
+      null
+    );
+    showOutput(buildWhitespaceIssueMessage(whitespaceIssue), "error");
+    return;
+  }
+
+  clearDebugState();
+  activeRunSession = {
+    code,
+    inputValues: [],
+  };
+  showOutput("Bajarilmoqda...", "");
+  clearOutputInputHost();
+  await continueRunSession(activeRunSession);
+}
+
+async function debugCode() {
+  if (!pyodide) {
+    showOutput("Python hali yuklanmagan. Iltimos, kuting...", "error");
+    return;
+  }
+
+  const code = editor.getValue();
+  if (!code.trim()) {
+    showOutput("Kod kiritilmagan.", "error");
+    return;
+  }
+
+  const whitespaceIssue = findBlockingWhitespaceIssue(code);
+  if (whitespaceIssue) {
+    clearDebugState();
+    clearEditorDiagnostics();
+    highlightEditorError(
+      whitespaceIssue.lineNumber,
+      whitespaceIssue.columnNumber,
+      null
+    );
+    showOutput(buildWhitespaceIssueMessage(whitespaceIssue), "error");
+    return;
+  }
+
+  clearDebugState();
+  activeDebugSession = {
+    code,
+    inputValues: [],
+    breakpoints: getBreakpointLines(),
+  };
+  showOutput("Debugger ishga tushirilmoqda...", "");
+  clearOutputInputHost();
+  await continueDebugSession(activeDebugSession);
+}
+
+async function setupSafeExecutionEnvironment() {
+  const pyodideVersion = pyodide.version;
+  if (!pyodideVersion || parseFloat(pyodideVersion) < 0.23) {
+    console.warn(
+      "Pyodide versiyasi eski. Ba'zi funksiyalar ishlamasligi mumkin."
+    );
+  }
+
+  await pyodide.runPythonAsync(`
+import sys
+import ast
+import builtins
+import traceback
+from io import StringIO
+import time
+
+try:
+    import autopep8
+except Exception:
+    autopep8 = None
+
+class LoopIterationError(Exception):
+    pass
+
+class AwaitingInput(Exception):
+    def __init__(self, prompt="", input_index=0):
+        super().__init__(prompt)
+        self.prompt = prompt or ""
+        self.input_index = input_index
+
+class LoopTransformer(ast.NodeTransformer):
+    def visit_For(self, node):
+        self.generic_visit(node)
+        guard_call = ast.Expr(
+            value=ast.Call(
+                func=ast.Name(id="_check_execution_time", ctx=ast.Load()),
+                args=[],
+                keywords=[]
+            )
+        )
+        ast.copy_location(guard_call, node)
+        node.body.insert(0, guard_call)
+        return node
+
+    def visit_While(self, node):
+        self.generic_visit(node)
+        guard_call = ast.Expr(
+            value=ast.Call(
+                func=ast.Name(id="_check_execution_time", ctx=ast.Load()),
+                args=[],
+                keywords=[]
+            )
+        )
+        ast.copy_location(guard_call, node)
+        node.body.insert(0, guard_call)
+        return node
+
+def _safe_repr(value, limit=140):
+    try:
+        rendered = repr(value)
+    except Exception:
+        rendered = f"<{type(value).__name__}>"
+
+    if len(rendered) > limit:
+        rendered = rendered[: limit - 3] + "..."
+    return rendered
+
+def _serialize_scope(scope):
+    serialized = []
+
+    for name in sorted(scope):
+        if str(name).startswith("__") or name == "_check_execution_time":
+            continue
+
+        try:
+            value = scope[name]
+        except Exception:
+            continue
+
+        serialized.append(
+            {
+                "name": str(name),
+                "type": type(value).__name__,
+                "value": _safe_repr(value),
+            }
+        )
+
+        if len(serialized) >= 18:
+            break
+
+    return serialized
+
+class SafeExecutor:
+    def __init__(self, max_execution_time=5):
+        self.max_execution_time = max_execution_time
+        self.start_time = None
+
+    def compile_code(self, code):
+        tree = ast.parse(code, filename="<user_code>", mode="exec")
+        transformer = LoopTransformer()
+        new_tree = transformer.visit(tree)
+        ast.fix_missing_locations(new_tree)
+        return compile(new_tree, filename="<user_code>", mode="exec")
+
+    def compile_debug_code(self, code):
+        prepared = str(code).replace("\\r\\n", "\\n")
+        return compile(prepared, filename="<user_code>", mode="exec")
+
+    def _serialize_error(self, error):
+        traceback_summary = traceback.extract_tb(error.__traceback__)
+        user_frame = None
+
+        for frame in reversed(traceback_summary):
+            if frame.filename == "<user_code>":
+                user_frame = frame
+                break
+
+        line_number = getattr(error, "lineno", None)
+        column_number = getattr(error, "offset", None)
+        code_line = getattr(error, "text", None)
+
+        if user_frame is not None:
+            if line_number is None:
+                line_number = user_frame.lineno
+            if not code_line:
+                code_line = user_frame.line
+
+        serialized = {
+            "type": error.__class__.__name__,
+            "message": str(error),
+            "line": line_number,
+            "column": column_number,
+            "codeLine": code_line.strip("\\n") if isinstance(code_line, str) else code_line,
+            "undefinedName": getattr(error, "name", None),
+            "traceback": "".join(traceback.format_exception(type(error), error, error.__traceback__)),
+        }
+
+        if isinstance(error, AwaitingInput):
+            serialized["prompt"] = error.prompt
+            serialized["inputIndex"] = error.input_index
+
+        return serialized
+
+    def _check_execution_time(self):
+        if time.time() - self.start_time > self.max_execution_time:
+            raise LoopIterationError("Loop execution time exceeded the limit!")
+
+    def _create_input_handler(self, provided_inputs=None):
+        provided_inputs = [
+            "" if value is None else str(value)
+            for value in (provided_inputs or [])
+        ]
+        consumed_inputs = 0
+
+        def managed_input(prompt=""):
+            nonlocal consumed_inputs
+            prompt_text = "" if prompt is None else str(prompt)
+            if consumed_inputs >= len(provided_inputs):
+                raise AwaitingInput(prompt_text, consumed_inputs)
+            value = provided_inputs[consumed_inputs]
+            consumed_inputs += 1
+            return value
+
+        return managed_input
+
+    def execute(self, code, provided_inputs=None):
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        sys.stdout = StringIO()
+        sys.stderr = StringIO()
+        result = {
+            "output": "",
+            "success": True,
+            "awaitingInput": False,
+            "error": None,
+        }
+
+        try:
+            compiled_code = self.compile_code(code)
+            self.start_time = time.time()
+            exec_builtins = dict(vars(builtins))
+            exec_builtins["input"] = self._create_input_handler(provided_inputs)
+            exec_globals = {
+                "__builtins__": exec_builtins,
+                "__name__": "__main__",
+                "_check_execution_time": self._check_execution_time,
+            }
+            exec(compiled_code, exec_globals)
+        except AwaitingInput as error:
+            result["success"] = False
+            result["awaitingInput"] = True
+            result["error"] = self._serialize_error(error)
+        except BaseException as error:
+            result["success"] = False
+            result["error"] = self._serialize_error(error)
+        finally:
+            stdout_value = sys.stdout.getvalue().rstrip()
+            stderr_value = sys.stderr.getvalue().rstrip()
+            result["output"] = "\\n".join(
+                value for value in [stdout_value, stderr_value] if value
+            )
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+
+        return result
+
+    def debug(self, code, provided_inputs=None, breakpoint_lines=None, max_steps=400):
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        sys.stdout = StringIO()
+        sys.stderr = StringIO()
+        result = {
+            "output": "",
+            "success": True,
+            "awaitingInput": False,
+            "error": None,
+            "steps": [],
+            "stepLimitReached": False,
+            "breakpointLines": sorted(
+                {
+                    int(line)
+                    for line in (breakpoint_lines or [])
+                    if str(line).strip().isdigit() and int(line) > 0
+                }
+            ),
+        }
+        source_lines = str(code).replace("\\r\\n", "\\n").split("\\n")
+        breakpoint_set = set(result["breakpointLines"])
+
+        def trace_calls(frame, event, arg):
+            if frame.f_code.co_filename != "<user_code>":
+                return trace_calls
+
+            if time.time() - self.start_time > self.max_execution_time:
+                raise LoopIterationError("Loop execution time exceeded the limit!")
+
+            if event == "line":
+                line_number = frame.f_lineno
+                code_line = (
+                    source_lines[line_number - 1]
+                    if 0 < line_number <= len(source_lines)
+                    else ""
+                )
+                result["steps"].append(
+                    {
+                        "line": line_number,
+                        "function": frame.f_code.co_name,
+                        "codeLine": code_line,
+                        "locals": _serialize_scope(frame.f_locals),
+                        "isBreakpoint": line_number in breakpoint_set,
+                    }
+                )
+
+                if len(result["steps"]) >= max_steps:
+                    result["stepLimitReached"] = True
+                    sys.settrace(None)
+                    return None
+
+            return trace_calls
+
+        try:
+            compiled_code = self.compile_debug_code(code)
+            self.start_time = time.time()
+            exec_builtins = dict(vars(builtins))
+            exec_builtins["input"] = self._create_input_handler(provided_inputs)
+            exec_globals = {
+                "__builtins__": exec_builtins,
+                "__name__": "__main__",
+                "_check_execution_time": self._check_execution_time,
+            }
+            sys.settrace(trace_calls)
+            exec(compiled_code, exec_globals)
+        except AwaitingInput as error:
+            result["success"] = False
+            result["awaitingInput"] = True
+            result["error"] = self._serialize_error(error)
+        except BaseException as error:
+            result["success"] = False
+            result["error"] = self._serialize_error(error)
+        finally:
+            sys.settrace(None)
+            stdout_value = sys.stdout.getvalue().rstrip()
+            stderr_value = sys.stderr.getvalue().rstrip()
+            result["output"] = "\\n".join(
+                value for value in [stdout_value, stderr_value] if value
+            )
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+
+        return result
+
+_safe_executor = SafeExecutor(max_execution_time=5)
+
+def auto_fix_code(code):
+    prepared = str(code).replace("\\r\\n", "\\n").replace("\\t", "    ")
+    formatter_available = autopep8 is not None
+
+    if formatter_available:
+        try:
+            prepared = autopep8.fix_code(prepared)
+        except Exception:
+            formatter_available = False
+
+    return {
+        "code": prepared,
+        "formatterAvailable": formatter_available,
+    }
+
+def safe_execute(code, provided_inputs=None):
+    return _safe_executor.execute(code, provided_inputs)
+
+def debug_execute(code, provided_inputs=None, breakpoint_lines=None, max_steps=400):
+    return _safe_executor.debug(code, provided_inputs, breakpoint_lines, max_steps)
+  `);
+}
+
+function renderOutputPanelInput(promptText, inputIndex) {
+  const inputHost = document.getElementById("output-input-host");
+  if (!inputHost) {
+    return;
+  }
+
+  inputHost.className = "output-input-host active";
+  inputHost.innerHTML = `
+    <div class="output-input-label">${escapeHtml(
+      promptText || `Input ${inputIndex + 1}`
+    )}</div>
+    <div class="output-input-row">
+      <input
+        type="text"
+        class="output-input-field"
+        id="output-panel-input"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="Qiymatni shu yerga kiriting"
+      />
+      <button type="button" class="output-input-submit" id="output-panel-submit">Yuborish</button>
+    </div>
+  `;
+
+  const inputElement = document.getElementById("output-panel-input");
+  const submitButton = document.getElementById("output-panel-submit");
+
+  const submitInput = () => {
+    const pendingSession = activeDebugSession || activeRunSession;
+    if (!pendingSession) {
+      clearOutputInputHost();
+      return;
+    }
+
+    pendingSession.inputValues.push(inputElement.value);
+    clearOutputInputHost();
+
+    if (activeDebugSession) {
+      continueDebugSession(activeDebugSession);
+      return;
+    }
+
+    continueRunSession(activeRunSession);
+  };
+
+  submitButton.addEventListener("click", submitInput);
+  inputElement.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      submitInput();
+    }
+  });
+  inputElement.addEventListener("input", () => {
+    inputElement.scrollLeft = inputElement.scrollWidth;
+    scrollOutputToLatest();
+  });
+  inputElement.focus();
+  scrollOutputToLatest();
+}
+
+function clearOutput() {
+  activeRunSession = null;
+  activeDebugSession = null;
+  clearEditorDiagnostics();
+  clearOutputInputHost();
+  clearDebugState();
+  showOutput('Natija tozalandi. Kodni yozing va "Run" tugmasini bosing.', "");
+}
+
+async function executeCodeSession(code, inputValues) {
+  const result = await pyodide.runPythonAsync(`
+import json
+result = safe_execute(${JSON.stringify(code)}, ${JSON.stringify(inputValues || [])})
+json.dumps(result)
+  `);
+
+  return JSON.parse(result);
+}
+
+async function executeDebugSession(code, inputValues, breakpoints) {
+  const result = await pyodide.runPythonAsync(`
+import json
+result = debug_execute(
+    ${JSON.stringify(code)},
+    ${JSON.stringify(inputValues || [])},
+    ${JSON.stringify(breakpoints || [])},
+    ${DEBUG_MAX_STEPS}
+)
+json.dumps(result)
+  `);
+
+  return JSON.parse(result);
+}
+
+async function continueRunSession(session) {
+  activeRunSession = session;
+  activeDebugSession = null;
+
+  try {
+    clearEditorDiagnostics();
+    clearDebugHighlight();
+    const startTime = performance.now();
+    const resultObj = await executeCodeSession(session.code, session.inputValues);
+    const executionTime = ((performance.now() - startTime) / 1000).toFixed(3);
+
+    if (resultObj.awaitingInput) {
+      showOutput(buildInputWaitingMessage(resultObj, executionTime), "");
+      renderOutputPanelInput(
+        resultObj.error?.prompt || "Qiymat kiriting",
+        resultObj.error?.inputIndex ?? session.inputValues.length
+      );
+      return;
+    }
+
+    activeRunSession = null;
+
+    if (!resultObj.success) {
+      const errorReport = buildExecutionErrorReport(
+        resultObj,
+        session.code,
+        executionTime
+      );
+      highlightEditorError(
+        errorReport.lineNumber,
+        errorReport.columnNumber,
+        errorReport.focusToken
+      );
+      showOutput(errorReport.text, "error");
+      return;
+    }
+
+    clearEditorDiagnostics();
+    if (resultObj.output && resultObj.output.trim()) {
+      showOutput(
+        `${resultObj.output}\nBajarilish vaqti: ${executionTime} soniya`,
+        "success"
+      );
+      return;
+    }
+
+    showOutput(
+      `Kod muvaffaqiyatli bajarildi\n\nBajarilish vaqti: ${executionTime} soniya`,
+      "success"
+    );
+  } catch (error) {
+    activeRunSession = null;
+    showOutput(`Xatolik:\n${error.message}`, "error");
+  }
+}
+
+async function continueDebugSession(session) {
+  activeDebugSession = session;
+  activeRunSession = null;
+
+  try {
+    clearEditorDiagnostics();
+    clearDebugHighlight();
+    const startTime = performance.now();
+    const resultObj = await executeDebugSession(
+      session.code,
+      session.inputValues,
+      session.breakpoints
+    );
+    const executionTime = ((performance.now() - startTime) / 1000).toFixed(3);
+
+    if (resultObj.awaitingInput) {
+      showOutput(
+        `Debug rejimi input kutmoqda\n\n${buildInputWaitingMessage(
+          resultObj,
+          executionTime
+        )}`,
+        ""
+      );
+      renderOutputPanelInput(
+        resultObj.error?.prompt || "Qiymat kiriting",
+        resultObj.error?.inputIndex ?? session.inputValues.length
+      );
+      return;
+    }
+
+    activeDebugSession = null;
+
+    if (!resultObj.success) {
+      const errorReport = buildExecutionErrorReport(
+        resultObj,
+        session.code,
+        executionTime
+      );
+      highlightEditorError(
+        errorReport.lineNumber,
+        errorReport.columnNumber,
+        errorReport.focusToken
+      );
+      showOutput(
+        `${errorReport.text}\n\nDebug qadamlar: ${
+          Array.isArray(resultObj.steps) ? resultObj.steps.length : 0
+        }`,
+        "error"
+      );
+      renderDebugSession(resultObj, executionTime, "error");
+      return;
+    }
+
+    clearEditorDiagnostics();
+    const lines = [
+      "Debug yakunlandi.",
+      `Qadamlar: ${Array.isArray(resultObj.steps) ? resultObj.steps.length : 0}`,
+      session.breakpoints.length
+        ? `Breakpointlar: ${session.breakpoints.join(", ")}`
+        : "Breakpointlar: yo'q",
+    ];
+
+    if (resultObj.stepLimitReached) {
+      lines.push(`Iz: faqat birinchi ${DEBUG_MAX_STEPS} qadam saqlandi.`);
+    }
+
+    lines.push("");
+
+    if (resultObj.output && resultObj.output.trim()) {
+      lines.push("Konsol chiqishi:", resultObj.output.trim(), "");
+    } else {
+      lines.push("Konsol chiqishi: yo'q", "");
+    }
+
+    lines.push(`Bajarilish vaqti: ${executionTime} soniya`);
+    showOutput(lines.join("\n"), "success");
+    renderDebugSession(resultObj, executionTime, "success");
+  } catch (error) {
+    activeDebugSession = null;
+    showOutput(`Debugger xatoligi:\n${error.message}`, "error");
+    clearDebugState();
+  }
+}
+
+async function setupSafeExecutionEnvironment() {
+  const pyodideVersion = pyodide.version;
+  if (!pyodideVersion || parseFloat(pyodideVersion) < 0.23) {
+    console.warn(
+      "Pyodide versiyasi eski. Ba'zi funksiyalar ishlamasligi mumkin."
+    );
+  }
+
+  await pyodide.runPythonAsync(`
+import sys
+import ast
+import builtins
+import traceback
+from io import StringIO
+import time
+
+try:
+    import autopep8
+except Exception:
+    autopep8 = None
+
+class LoopIterationError(Exception):
+    pass
+
+class AwaitingInput(Exception):
+    def __init__(self, prompt="", input_index=0):
+        super().__init__(prompt)
+        self.prompt = prompt or ""
+        self.input_index = input_index
+
+class LoopTransformer(ast.NodeTransformer):
+    def visit_For(self, node):
+        self.generic_visit(node)
+        guard_call = ast.Expr(
+            value=ast.Call(
+                func=ast.Name(id="_check_execution_time", ctx=ast.Load()),
+                args=[],
+                keywords=[]
+            )
+        )
+        ast.copy_location(guard_call, node)
+        node.body.insert(0, guard_call)
+        return node
+
+    def visit_While(self, node):
+        self.generic_visit(node)
+        guard_call = ast.Expr(
+            value=ast.Call(
+                func=ast.Name(id="_check_execution_time", ctx=ast.Load()),
+                args=[],
+                keywords=[]
+            )
+        )
+        ast.copy_location(guard_call, node)
+        node.body.insert(0, guard_call)
+        return node
+
+def _safe_repr(value, limit=140):
+    try:
+        rendered = repr(value)
+    except Exception:
+        rendered = f"<{type(value).__name__}>"
+
+    if len(rendered) > limit:
+        rendered = rendered[: limit - 3] + "..."
+    return rendered
+
+def _serialize_scope(scope):
+    serialized = []
+
+    for name in sorted(scope):
+        if str(name).startswith("__") or name == "_check_execution_time":
+            continue
+
+        try:
+            value = scope[name]
+        except Exception:
+            continue
+
+        serialized.append(
+            {
+                "name": str(name),
+                "type": type(value).__name__,
+                "value": _safe_repr(value),
+            }
+        )
+
+        if len(serialized) >= 18:
+            break
+
+    return serialized
+
+class SafeExecutor:
+    def __init__(self, max_execution_time=5):
+        self.max_execution_time = max_execution_time
+        self.start_time = None
+
+    def compile_code(self, code):
+        tree = ast.parse(code, filename="<user_code>", mode="exec")
+        transformer = LoopTransformer()
+        new_tree = transformer.visit(tree)
+        ast.fix_missing_locations(new_tree)
+        return compile(new_tree, filename="<user_code>", mode="exec")
+
+    def compile_debug_code(self, code):
+        prepared = str(code).replace("\\r\\n", "\\n")
+        return compile(prepared, filename="<user_code>", mode="exec")
+
+    def _serialize_error(self, error):
+        traceback_summary = traceback.extract_tb(error.__traceback__)
+        user_frame = None
+
+        for frame in reversed(traceback_summary):
+            if frame.filename == "<user_code>":
+                user_frame = frame
+                break
+
+        line_number = getattr(error, "lineno", None)
+        column_number = getattr(error, "offset", None)
+        code_line = getattr(error, "text", None)
+
+        if user_frame is not None:
+            if line_number is None:
+                line_number = user_frame.lineno
+            if not code_line:
+                code_line = user_frame.line
+
+        serialized = {
+            "type": error.__class__.__name__,
+            "message": str(error),
+            "line": line_number,
+            "column": column_number,
+            "codeLine": code_line.strip("\\n") if isinstance(code_line, str) else code_line,
+            "undefinedName": getattr(error, "name", None),
+            "traceback": "".join(traceback.format_exception(type(error), error, error.__traceback__)),
+        }
+
+        if isinstance(error, AwaitingInput):
+            serialized["prompt"] = error.prompt
+            serialized["inputIndex"] = error.input_index
+
+        return serialized
+
+    def _check_execution_time(self):
+        if time.time() - self.start_time > self.max_execution_time:
+            raise LoopIterationError("Loop execution time exceeded the limit!")
+
+    def _create_input_handler(self, provided_inputs=None):
+        provided_inputs = [
+            "" if value is None else str(value)
+            for value in (provided_inputs or [])
+        ]
+        consumed_inputs = 0
+
+        def managed_input(prompt=""):
+            nonlocal consumed_inputs
+            prompt_text = "" if prompt is None else str(prompt)
+            if consumed_inputs >= len(provided_inputs):
+                raise AwaitingInput(prompt_text, consumed_inputs)
+            value = provided_inputs[consumed_inputs]
+            consumed_inputs += 1
+            return value
+
+        return managed_input
+
+    def execute(self, code, provided_inputs=None):
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        sys.stdout = StringIO()
+        sys.stderr = StringIO()
+        result = {
+            "output": "",
+            "success": True,
+            "awaitingInput": False,
+            "error": None,
+        }
+
+        try:
+            compiled_code = self.compile_code(code)
+            self.start_time = time.time()
+            exec_builtins = dict(vars(builtins))
+            exec_builtins["input"] = self._create_input_handler(provided_inputs)
+            exec_globals = {
+                "__builtins__": exec_builtins,
+                "__name__": "__main__",
+                "_check_execution_time": self._check_execution_time,
+            }
+            exec(compiled_code, exec_globals)
+        except AwaitingInput as error:
+            result["success"] = False
+            result["awaitingInput"] = True
+            result["error"] = self._serialize_error(error)
+        except BaseException as error:
+            result["success"] = False
+            result["error"] = self._serialize_error(error)
+        finally:
+            stdout_value = sys.stdout.getvalue().rstrip()
+            stderr_value = sys.stderr.getvalue().rstrip()
+            result["output"] = "\\n".join(
+                value for value in [stdout_value, stderr_value] if value
+            )
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+
+        return result
+
+    def debug(self, code, provided_inputs=None, breakpoint_lines=None, max_steps=400):
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        sys.stdout = StringIO()
+        sys.stderr = StringIO()
+        result = {
+            "output": "",
+            "success": True,
+            "awaitingInput": False,
+            "error": None,
+            "steps": [],
+            "stepLimitReached": False,
+            "breakpointLines": sorted(
+                {
+                    int(line)
+                    for line in (breakpoint_lines or [])
+                    if str(line).strip().isdigit() and int(line) > 0
+                }
+            ),
+        }
+        source_lines = str(code).replace("\\r\\n", "\\n").split("\\n")
+        breakpoint_set = set(result["breakpointLines"])
+
+        def trace_calls(frame, event, arg):
+            if frame.f_code.co_filename != "<user_code>":
+                return trace_calls
+
+            if time.time() - self.start_time > self.max_execution_time:
+                raise LoopIterationError("Loop execution time exceeded the limit!")
+
+            if event == "line":
+                line_number = frame.f_lineno
+                code_line = (
+                    source_lines[line_number - 1]
+                    if 0 < line_number <= len(source_lines)
+                    else ""
+                )
+                result["steps"].append(
+                    {
+                        "line": line_number,
+                        "function": frame.f_code.co_name,
+                        "codeLine": code_line,
+                        "locals": _serialize_scope(frame.f_locals),
+                        "isBreakpoint": line_number in breakpoint_set,
+                    }
+                )
+
+                if len(result["steps"]) >= max_steps:
+                    result["stepLimitReached"] = True
+                    sys.settrace(None)
+                    return None
+
+            return trace_calls
+
+        try:
+            compiled_code = self.compile_debug_code(code)
+            self.start_time = time.time()
+            exec_builtins = dict(vars(builtins))
+            exec_builtins["input"] = self._create_input_handler(provided_inputs)
+            exec_globals = {
+                "__builtins__": exec_builtins,
+                "__name__": "__main__",
+                "_check_execution_time": self._check_execution_time,
+            }
+            sys.settrace(trace_calls)
+            exec(compiled_code, exec_globals)
+        except AwaitingInput as error:
+            result["success"] = False
+            result["awaitingInput"] = True
+            result["error"] = self._serialize_error(error)
+        except BaseException as error:
+            result["success"] = False
+            result["error"] = self._serialize_error(error)
+        finally:
+            sys.settrace(None)
+            stdout_value = sys.stdout.getvalue().rstrip()
+            stderr_value = sys.stderr.getvalue().rstrip()
+            result["output"] = "\\n".join(
+                value for value in [stdout_value, stderr_value] if value
+            )
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+
+        return result
+
+_safe_executor = SafeExecutor(max_execution_time=5)
+
+def auto_fix_code(code):
+    prepared = str(code).replace("\\r\\n", "\\n").replace("\\t", "    ")
+    formatter_available = autopep8 is not None
+
+    if formatter_available:
+        try:
+            prepared = autopep8.fix_code(prepared)
+        except Exception:
+            formatter_available = False
+
+    return {
+        "code": prepared,
+        "formatterAvailable": formatter_available,
+    }
+
+def safe_execute(code, provided_inputs=None):
+    return _safe_executor.execute(code, provided_inputs)
+
+def debug_execute(code, provided_inputs=None, breakpoint_lines=None, max_steps=400):
+    return _safe_executor.debug(code, provided_inputs, breakpoint_lines, max_steps)
+  `);
+}
+
+async function runCode() {
+  if (!pyodide) {
+    showOutput("Python hali yuklanmagan. Iltimos, kuting...", "error");
+    return;
+  }
+
+  const code = editor.getValue();
+  if (!code.trim()) {
+    showOutput("Kod kiritilmagan.", "error");
+    return;
+  }
+
+  const whitespaceIssue = findBlockingWhitespaceIssue(code);
+  if (whitespaceIssue) {
+    clearDebugState();
+    clearEditorDiagnostics();
+    highlightEditorError(
+      whitespaceIssue.lineNumber,
+      whitespaceIssue.columnNumber,
+      null
+    );
+    showOutput(buildWhitespaceIssueMessage(whitespaceIssue), "error");
+    return;
+  }
+
+  clearDebugState();
+  activeRunSession = {
+    code,
+    inputValues: [],
+  };
+  showOutput("Bajarilmoqda...", "");
+  clearOutputInputHost();
+  await continueRunSession(activeRunSession);
+}
+
+async function debugCode() {
+  if (!pyodide) {
+    showOutput("Python hali yuklanmagan. Iltimos, kuting...", "error");
+    return;
+  }
+
+  const code = editor.getValue();
+  if (!code.trim()) {
+    showOutput("Kod kiritilmagan.", "error");
+    return;
+  }
+
+  const whitespaceIssue = findBlockingWhitespaceIssue(code);
+  if (whitespaceIssue) {
+    clearDebugState();
+    clearEditorDiagnostics();
+    highlightEditorError(
+      whitespaceIssue.lineNumber,
+      whitespaceIssue.columnNumber,
+      null
+    );
+    showOutput(buildWhitespaceIssueMessage(whitespaceIssue), "error");
+    return;
+  }
+
+  clearDebugState();
+  activeDebugSession = {
+    code,
+    inputValues: [],
+    breakpoints: getBreakpointLines(),
+  };
+  showOutput("Debugger ishga tushirilmoqda...", "");
+  clearOutputInputHost();
+  await continueDebugSession(activeDebugSession);
+}
+
+window.addEventListener("DOMContentLoaded", setupDebugPanelControls);
+
+document.addEventListener("keydown", function (event) {
+  if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "Enter") {
+    event.preventDefault();
+    debugCode();
+  }
+});
 
 window.addEventListener("DOMContentLoaded", function () {
   const textarea = document.getElementById("code-editor");
@@ -2726,3 +4159,743 @@ document.addEventListener("keydown", function (e) {
     downloadCode();
   }
 });
+
+function clearDebugHighlight() {
+  if (!editor) {
+    return;
+  }
+
+  if (activeDebugLineNumber !== null) {
+    editor.removeLineClass(activeDebugLineNumber, "background", "debug-line");
+    editor.removeLineClass(
+      activeDebugLineNumber,
+      "background",
+      "debug-line-breakpoint"
+    );
+    activeDebugLineNumber = null;
+  }
+}
+
+function highlightDebugLine(lineNumber, isBreakpoint) {
+  clearDebugHighlight();
+
+  if (!editor) {
+    return;
+  }
+
+  const safeLineNumber = normalizePositiveInteger(lineNumber);
+  if (!safeLineNumber || safeLineNumber > editor.lineCount()) {
+    return;
+  }
+
+  const lineIndex = safeLineNumber - 1;
+  activeDebugLineNumber = lineIndex;
+  editor.addLineClass(
+    lineIndex,
+    "background",
+    isBreakpoint ? "debug-line-breakpoint" : "debug-line"
+  );
+  editor.scrollIntoView({ line: lineIndex, ch: 0 }, 120);
+}
+
+function resetDebugPanelView() {
+  const panel = document.getElementById("debug-panel");
+  const summary = document.getElementById("debug-summary");
+  const counter = document.getElementById("debug-step-counter");
+  const location = document.getElementById("debug-step-location");
+  const stepLine = document.getElementById("debug-step-line");
+  const varsList = document.getElementById("debug-vars-list");
+  const prevButton = document.getElementById("debug-prev");
+  const nextButton = document.getElementById("debug-next");
+  const breakpointButton = document.getElementById("debug-breakpoint");
+
+  if (panel) {
+    panel.classList.remove("active");
+  }
+
+  if (summary) {
+    summary.textContent = "Debug sessiya hali boshlanmagan.";
+  }
+
+  if (counter) {
+    counter.textContent = "0 / 0";
+  }
+
+  if (location) {
+    location.textContent = "Qator tanlanmagan";
+  }
+
+  if (stepLine) {
+    stepLine.textContent =
+      'Debugger qadamlarini ko\'rish uchun "Debug" tugmasini bosing.';
+  }
+
+  if (varsList) {
+    varsList.innerHTML =
+      '<div class="debug-empty">Hali ko\'rsatish uchun qadam yo\'q.</div>';
+  }
+
+  [prevButton, nextButton, breakpointButton].forEach((button) => {
+    if (button) {
+      button.disabled = true;
+    }
+  });
+}
+
+function clearDebugState() {
+  activeDebugSession = null;
+  activeDebugSteps = [];
+  activeDebugStepIndex = 0;
+  clearDebugHighlight();
+  resetDebugPanelView();
+}
+
+function getBreakpointLines() {
+  if (!editor) {
+    return [];
+  }
+
+  const breakpoints = [];
+  for (let lineIndex = 0; lineIndex < editor.lineCount(); lineIndex += 1) {
+    const info = editor.lineInfo(lineIndex);
+    if (info?.gutterMarkers?.breakpoints) {
+      breakpoints.push(lineIndex + 1);
+    }
+  }
+
+  return breakpoints;
+}
+
+function findNextBreakpointStep(startIndex = 0) {
+  for (let index = startIndex; index < activeDebugSteps.length; index += 1) {
+    if (activeDebugSteps[index]?.isBreakpoint) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+function updateDebugNavButtons() {
+  const prevButton = document.getElementById("debug-prev");
+  const nextButton = document.getElementById("debug-next");
+  const breakpointButton = document.getElementById("debug-breakpoint");
+
+  if (prevButton) {
+    prevButton.disabled = activeDebugSteps.length <= 1 || activeDebugStepIndex <= 0;
+  }
+
+  if (nextButton) {
+    nextButton.disabled =
+      activeDebugSteps.length <= 1 ||
+      activeDebugStepIndex >= activeDebugSteps.length - 1;
+  }
+
+  if (breakpointButton) {
+    breakpointButton.disabled =
+      activeDebugSteps.length === 0 ||
+      !activeDebugSteps.some((step) => step?.isBreakpoint);
+  }
+}
+
+function renderDebugStep(stepIndex) {
+  const step = activeDebugSteps[stepIndex];
+  if (!step) {
+    return;
+  }
+
+  const panel = document.getElementById("debug-panel");
+  const counter = document.getElementById("debug-step-counter");
+  const location = document.getElementById("debug-step-location");
+  const stepLine = document.getElementById("debug-step-line");
+  const varsList = document.getElementById("debug-vars-list");
+
+  activeDebugStepIndex = stepIndex;
+
+  if (panel) {
+    panel.classList.add("active");
+  }
+
+  if (counter) {
+    counter.textContent = `${stepIndex + 1} / ${activeDebugSteps.length}`;
+  }
+
+  if (location) {
+    const functionLabel =
+      step.function && step.function !== "<module>"
+        ? ` | ${step.function}()`
+        : "";
+    location.textContent = `${step.line}-qator${functionLabel}${
+      step.isBreakpoint ? " | breakpoint" : ""
+    }`;
+  }
+
+  if (stepLine) {
+    stepLine.textContent = `${step.line} | ${step.codeLine || "(bo'sh qator)"}`;
+  }
+
+  if (varsList) {
+    if (!Array.isArray(step.locals) || step.locals.length === 0) {
+      varsList.innerHTML =
+        '<div class="debug-empty">Bu qadamda ko\'rinadigan o\'zgaruvchi yo\'q.</div>';
+    } else {
+      varsList.innerHTML = step.locals
+        .map(
+          (item) => `
+            <div class="debug-var-item">
+              <div class="debug-var-name">${escapeHtml(item.name)} <span class="debug-var-type">(${escapeHtml(item.type)})</span></div>
+              <div class="debug-var-value">${escapeHtml(item.value)}</div>
+            </div>
+          `
+        )
+        .join("");
+    }
+  }
+
+  highlightDebugLine(step.line, Boolean(step.isBreakpoint));
+  updateDebugNavButtons();
+}
+
+function renderDebugSession(resultObj, executionTime, mode) {
+  const panel = document.getElementById("debug-panel");
+  const summary = document.getElementById("debug-summary");
+  const steps = Array.isArray(resultObj?.steps) ? resultObj.steps : [];
+  const breakpoints = Array.isArray(resultObj?.breakpointLines)
+    ? resultObj.breakpointLines
+    : [];
+  const parts = [
+    `${mode === "error" ? "Debug to'xtadi" : "Debug tayyor"}`,
+    `${steps.length} ta qadam`,
+    breakpoints.length
+      ? `breakpointlar: ${breakpoints.join(", ")}`
+      : "breakpointlar yo'q",
+  ];
+
+  if (resultObj?.stepLimitReached) {
+    parts.push(`faqat birinchi ${steps.length} qadam saqlandi`);
+  }
+
+  parts.push(`${executionTime} soniya`);
+
+  activeDebugSteps = steps;
+  activeDebugStepIndex = 0;
+
+  if (summary) {
+    summary.textContent = parts.join(" | ");
+  }
+
+  if (!panel || steps.length === 0) {
+    resetDebugPanelView();
+    return;
+  }
+
+  panel.classList.add("active");
+  const firstBreakpointIndex = findNextBreakpointStep(0);
+  const initialIndex =
+    mode === "error"
+      ? Math.max(0, steps.length - 1)
+      : firstBreakpointIndex >= 0
+        ? firstBreakpointIndex
+        : 0;
+  renderDebugStep(initialIndex);
+  scrollOutputToLatest();
+}
+
+function jumpToNextBreakpoint() {
+  if (!activeDebugSteps.length) {
+    return;
+  }
+
+  let targetIndex = findNextBreakpointStep(activeDebugStepIndex + 1);
+  if (targetIndex < 0) {
+    targetIndex = findNextBreakpointStep(0);
+  }
+
+  if (targetIndex >= 0) {
+    renderDebugStep(targetIndex);
+  }
+}
+
+function setupDebugPanelControls() {
+  const prevButton = document.getElementById("debug-prev");
+  const nextButton = document.getElementById("debug-next");
+  const breakpointButton = document.getElementById("debug-breakpoint");
+  const closeButton = document.getElementById("debug-close");
+
+  if (prevButton) {
+    prevButton.addEventListener("click", () => {
+      if (activeDebugStepIndex > 0) {
+        renderDebugStep(activeDebugStepIndex - 1);
+      }
+    });
+  }
+
+  if (nextButton) {
+    nextButton.addEventListener("click", () => {
+      if (activeDebugStepIndex < activeDebugSteps.length - 1) {
+        renderDebugStep(activeDebugStepIndex + 1);
+      }
+    });
+  }
+
+  if (breakpointButton) {
+    breakpointButton.addEventListener("click", jumpToNextBreakpoint);
+  }
+
+  if (closeButton) {
+    closeButton.addEventListener("click", clearDebugState);
+  }
+
+  resetDebugPanelView();
+}
+
+function buildExactFixes(errorInfo, codeLine, undefinedName, suggestion) {
+  const errorType = errorInfo?.type || "PythonError";
+  const message = String(errorInfo?.message || "");
+  const trimmedLine = String(codeLine || "").trim();
+  const exactFixes = [];
+
+  if (errorType === "NameError") {
+    if (suggestion && suggestion !== undefinedName) {
+      const suggestedLine = buildSuggestedLine(codeLine, undefinedName, suggestion);
+      if (suggestedLine && suggestedLine !== codeLine) {
+        exactFixes.push(`Shu qatorni quyidagicha yozing: ${suggestedLine}`);
+      } else {
+        exactFixes.push(`"${undefinedName}" o'rniga "${suggestion}" nomini ishlating.`);
+      }
+    } else if (undefinedName) {
+      exactFixes.push(
+        `"${undefinedName}" ni ishlatishdan oldin yuqorida qiymat bering yoki kerakli moduldan import qiling.`
+      );
+    }
+  }
+
+  if (errorType === "SyntaxError") {
+    if (/expected ':'/i.test(message) && trimmedLine) {
+      exactFixes.push(`Qator oxiriga ':' qo'shing: ${trimmedLine}:`);
+    } else if (/was never closed/i.test(message)) {
+      exactFixes.push("Ochilgan qavs yoki qo'shtirnoqni shu qatorda yoping.");
+    } else if (/invalid syntax/i.test(message)) {
+      exactFixes.push(
+        "Muammo bo'lgan qatordagi qavs, vergul va operatorlarni bitta-bitta tekshiring."
+      );
+    }
+  }
+
+  if (errorType === "IndentationError" || errorType === "TabError") {
+    exactFixes.push(
+      "Muammo bo'lgan qator boshidagi bo'sh joyni tozalab, qayta 4 ta space bilan yozing."
+    );
+  }
+
+  if (errorType === "TypeError") {
+    if (/unsupported operand type\(s\).*'function'/i.test(message)) {
+      exactFixes.push(
+        "Funksiya nomini emas, uning natijasini ishlating. Masalan: `my_func()` ko'rinishida chaqiring."
+      );
+    } else if (
+      /(?:'str'.*'int'|'int'.*'str'|'float'.*'str'|'str'.*'float')/i.test(
+        message
+      )
+    ) {
+      exactFixes.push(
+        "Amaldan oldin qiymatlarni bir xil turga o'tkazing: `int(...)`, `float(...)` yoki `str(...)`."
+      );
+    }
+  }
+
+  return [...new Set(exactFixes)];
+}
+
+function buildExecutionErrorReport(resultObj, code, executionTime) {
+  const errorInfo = resultObj.error || {};
+  const undefinedName = extractUndefinedName(errorInfo);
+  const suggestion =
+    extractSuggestionFromMessage(errorInfo.message) ||
+    findClosestNameSuggestion(undefinedName, code);
+  const friendlyMessage = getFriendlyErrorMessage(errorInfo, undefinedName);
+  const rawPythonMessage = stripInlineSuggestion(errorInfo.message);
+  const lineNumber = normalizePositiveInteger(errorInfo.line);
+  let columnNumber = normalizePositiveInteger(errorInfo.column);
+  const editorLine =
+    lineNumber && editor && lineNumber <= editor.lineCount()
+      ? editor.getLine(lineNumber - 1)
+      : "";
+  const codeLine = (editorLine || errorInfo.codeLine || "").replace(/\r?\n$/, "");
+  const repairHints = buildRepairHints(
+    errorInfo,
+    undefinedName,
+    suggestion,
+    codeLine
+  );
+  const exactFixes = buildExactFixes(
+    errorInfo,
+    codeLine,
+    undefinedName,
+    suggestion
+  );
+  const indentationDiagnostics = buildIndentationDiagnostics(errorInfo, code);
+
+  if (!columnNumber && undefinedName && codeLine) {
+    columnNumber = findColumnForName(codeLine, undefinedName);
+  }
+
+  const reportLines = [
+    `Xatolik turi: ${errorInfo.type || "PythonError"}`,
+    `Sabab: ${friendlyMessage}`,
+  ];
+
+  if (rawPythonMessage && rawPythonMessage !== friendlyMessage) {
+    reportLines.push(`Python xabari: ${rawPythonMessage}`);
+  }
+
+  if (lineNumber) {
+    reportLines.push(
+      `Joylashuv: ${lineNumber}-qator${columnNumber ? `, ${columnNumber}-ustun` : ""}`
+    );
+  }
+
+  if (codeLine) {
+    reportLines.push(
+      "",
+      "Muammo bo'lgan qator:",
+      buildCodeFrame(codeLine, lineNumber, columnNumber)
+    );
+  }
+
+  if (indentationDiagnostics.lines.length) {
+    reportLines.push("", "Indentatsiya tahlili:");
+    indentationDiagnostics.lines.forEach((line, index) => {
+      reportLines.push(`${index + 1}. ${line}`);
+    });
+
+    if (
+      indentationDiagnostics.suggestedLine &&
+      indentationDiagnostics.suggestedLine !== codeLine
+    ) {
+      reportLines.push(
+        "Tavsiya etilgan indent:",
+        indentationDiagnostics.suggestedLine
+      );
+    }
+  }
+
+  if (exactFixes.length) {
+    reportLines.push("", "Aniq tuzatish:");
+    exactFixes.forEach((fix, index) => {
+      reportLines.push(`${index + 1}. ${fix}`);
+    });
+  }
+
+  if (suggestion && suggestion !== undefinedName) {
+    reportLines.push("", `Taxminiy yechim: "${suggestion}" ni sinab ko'ring.`);
+
+    const suggestedLine = buildSuggestedLine(codeLine, undefinedName, suggestion);
+    if (suggestedLine && suggestedLine !== codeLine) {
+      reportLines.push("Tavsiya etilgan variant:", suggestedLine);
+    }
+  }
+
+  if (repairHints.length) {
+    reportLines.push("", "Sinab ko'ring:");
+    repairHints.forEach((hint, index) => {
+      reportLines.push(`${index + 1}. ${hint}`);
+    });
+  }
+
+  if (resultObj.output && resultObj.output.trim()) {
+    reportLines.push("", "Xatolikdan oldingi chiqish:", resultObj.output.trim());
+  }
+
+  reportLines.push("", `Bajarilish vaqti: ${executionTime} soniya`);
+
+  return {
+    text: reportLines.join("\n"),
+    lineNumber,
+    columnNumber,
+    focusToken: undefinedName || suggestion || null,
+  };
+}
+
+async function ensureDebugExecutionEnvironment() {
+  if (!pyodide) {
+    return;
+  }
+
+  await pyodide.runPythonAsync(`
+import sys
+import builtins
+import traceback
+from io import StringIO
+import time
+
+try:
+    AwaitingInput
+except NameError:
+    class AwaitingInput(Exception):
+        def __init__(self, prompt="", input_index=0):
+            super().__init__(prompt)
+            self.prompt = prompt or ""
+            self.input_index = input_index
+
+try:
+    LoopIterationError
+except NameError:
+    class LoopIterationError(Exception):
+        pass
+
+def _debug_safe_repr(value, limit=140):
+    try:
+        rendered = repr(value)
+    except Exception:
+        rendered = f"<{type(value).__name__}>"
+    if len(rendered) > limit:
+        rendered = rendered[: limit - 3] + "..."
+    return rendered
+
+def _debug_serialize_scope(scope):
+    serialized = []
+    for name in sorted(scope):
+        if str(name).startswith("__"):
+            continue
+        try:
+            value = scope[name]
+        except Exception:
+            continue
+        serialized.append(
+            {
+                "name": str(name),
+                "type": type(value).__name__,
+                "value": _debug_safe_repr(value),
+            }
+        )
+        if len(serialized) >= 18:
+            break
+    return serialized
+
+def debug_execute(code, provided_inputs=None, breakpoint_lines=None, max_steps=400):
+    old_stdout = sys.stdout
+    old_stderr = sys.stderr
+    sys.stdout = StringIO()
+    sys.stderr = StringIO()
+    result = {
+        "output": "",
+        "success": True,
+        "awaitingInput": False,
+        "error": None,
+        "steps": [],
+        "stepLimitReached": False,
+        "breakpointLines": sorted(
+            {
+                int(line)
+                for line in (breakpoint_lines or [])
+                if str(line).strip().isdigit() and int(line) > 0
+            }
+        ),
+    }
+    source_lines = str(code).replace("\\r\\n", "\\n").split("\\n")
+    breakpoint_set = set(result["breakpointLines"])
+    provided_inputs = ["" if value is None else str(value) for value in (provided_inputs or [])]
+    consumed_inputs = 0
+    start_time = time.time()
+
+    def managed_input(prompt=""):
+        nonlocal consumed_inputs
+        prompt_text = "" if prompt is None else str(prompt)
+        if consumed_inputs >= len(provided_inputs):
+            raise AwaitingInput(prompt_text, consumed_inputs)
+        value = provided_inputs[consumed_inputs]
+        consumed_inputs += 1
+        return value
+
+    def serialize_error(error):
+        traceback_summary = traceback.extract_tb(error.__traceback__)
+        user_frame = None
+
+        for frame in reversed(traceback_summary):
+            if frame.filename == "<user_code>":
+                user_frame = frame
+                break
+
+        line_number = getattr(error, "lineno", None)
+        column_number = getattr(error, "offset", None)
+        code_line = getattr(error, "text", None)
+
+        if user_frame is not None:
+            if line_number is None:
+                line_number = user_frame.lineno
+            if not code_line:
+                code_line = user_frame.line
+
+        serialized = {
+            "type": error.__class__.__name__,
+            "message": str(error),
+            "line": line_number,
+            "column": column_number,
+            "codeLine": code_line.strip("\\n") if isinstance(code_line, str) else code_line,
+            "undefinedName": getattr(error, "name", None),
+            "traceback": "".join(traceback.format_exception(type(error), error, error.__traceback__)),
+        }
+
+        if isinstance(error, AwaitingInput):
+            serialized["prompt"] = error.prompt
+            serialized["inputIndex"] = error.input_index
+
+        return serialized
+
+    def trace_calls(frame, event, arg):
+        if frame.f_code.co_filename != "<user_code>":
+            return trace_calls
+
+        if time.time() - start_time > 5:
+            raise LoopIterationError("Loop execution time exceeded the limit!")
+
+        if event == "line":
+            line_number = frame.f_lineno
+            code_line = (
+                source_lines[line_number - 1]
+                if 0 < line_number <= len(source_lines)
+                else ""
+            )
+            result["steps"].append(
+                {
+                    "line": line_number,
+                    "function": frame.f_code.co_name,
+                    "codeLine": code_line,
+                    "locals": _debug_serialize_scope(frame.f_locals),
+                    "isBreakpoint": line_number in breakpoint_set,
+                }
+            )
+            if len(result["steps"]) >= max_steps:
+                result["stepLimitReached"] = True
+                sys.settrace(None)
+                return None
+
+        return trace_calls
+
+    try:
+        compiled_code = compile(str(code).replace("\\r\\n", "\\n"), "<user_code>", "exec")
+        exec_builtins = dict(vars(builtins))
+        exec_builtins["input"] = managed_input
+        exec_globals = {
+            "__builtins__": exec_builtins,
+            "__name__": "__main__",
+        }
+        sys.settrace(trace_calls)
+        exec(compiled_code, exec_globals)
+    except AwaitingInput as error:
+        result["success"] = False
+        result["awaitingInput"] = True
+        result["error"] = serialize_error(error)
+    except BaseException as error:
+        result["success"] = False
+        result["error"] = serialize_error(error)
+    finally:
+        sys.settrace(None)
+        stdout_value = sys.stdout.getvalue().rstrip()
+        stderr_value = sys.stderr.getvalue().rstrip()
+        result["output"] = "\\n".join(
+            value for value in [stdout_value, stderr_value] if value
+        )
+        sys.stdout = old_stdout
+        sys.stderr = old_stderr
+
+    return result
+  `);
+}
+
+async function executeDebugSession(code, inputValues, breakpoints) {
+  await ensureDebugExecutionEnvironment();
+  const result = await pyodide.runPythonAsync(`
+import json
+result = debug_execute(
+    ${JSON.stringify(code)},
+    ${JSON.stringify(inputValues || [])},
+    ${JSON.stringify(breakpoints || [])},
+    ${DEBUG_MAX_STEPS}
+)
+json.dumps(result)
+  `);
+
+  return JSON.parse(result);
+}
+
+function clearOutput() {
+  activeRunSession = null;
+  activeDebugSession = null;
+  clearEditorDiagnostics();
+  clearOutputInputHost();
+  clearDebugState();
+  showOutput('Natija tozalandi. Kodni yozing va "Run" tugmasini bosing.', "");
+}
+
+async function runCode() {
+  if (!pyodide) {
+    showOutput("Python hali yuklanmagan. Iltimos, kuting...", "error");
+    return;
+  }
+
+  const code = editor.getValue();
+  if (!code.trim()) {
+    showOutput("Kod kiritilmagan.", "error");
+    return;
+  }
+
+  const whitespaceIssue = findBlockingWhitespaceIssue(code);
+  if (whitespaceIssue) {
+    clearDebugState();
+    clearEditorDiagnostics();
+    highlightEditorError(
+      whitespaceIssue.lineNumber,
+      whitespaceIssue.columnNumber,
+      null
+    );
+    showOutput(buildWhitespaceIssueMessage(whitespaceIssue), "error");
+    return;
+  }
+
+  clearDebugState();
+  activeRunSession = {
+    code,
+    inputValues: [],
+  };
+  showOutput("Bajarilmoqda...", "");
+  clearOutputInputHost();
+  await continueRunSession(activeRunSession);
+}
+
+async function debugCode() {
+  if (!pyodide) {
+    showOutput("Python hali yuklanmagan. Iltimos, kuting...", "error");
+    return;
+  }
+
+  const code = editor.getValue();
+  if (!code.trim()) {
+    showOutput("Kod kiritilmagan.", "error");
+    return;
+  }
+
+  const whitespaceIssue = findBlockingWhitespaceIssue(code);
+  if (whitespaceIssue) {
+    clearDebugState();
+    clearEditorDiagnostics();
+    highlightEditorError(
+      whitespaceIssue.lineNumber,
+      whitespaceIssue.columnNumber,
+      null
+    );
+    showOutput(buildWhitespaceIssueMessage(whitespaceIssue), "error");
+    return;
+  }
+
+  clearDebugState();
+  activeDebugSession = {
+    code,
+    inputValues: [],
+    breakpoints: getBreakpointLines(),
+  };
+  showOutput("Debugger ishga tushirilmoqda...", "");
+  clearOutputInputHost();
+  await continueDebugSession(activeDebugSession);
+}

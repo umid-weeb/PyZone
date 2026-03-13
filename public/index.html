@@ -23,7 +23,7 @@
     <meta name="author" content="Isroilov's Team">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Roboto+Mono:wght@400;500;600&family=Source+Code+Pro:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Anonymous+Pro:wght@400;700&family=Azeret+Mono:wght@400;500;600&family=Courier+Prime:wght@400;700&family=Fira+Code:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Inconsolata:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Roboto+Mono:wght@400;500;600&family=Source+Code+Pro:wght@400;500;600&family=Space+Mono:wght@400;700&family=Ubuntu+Mono:wght@400;700&family=Victor+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/eclipse.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
@@ -75,6 +75,12 @@
                         <svg viewBox="0 0 24 24"><path d="M8 6l10 6-10 6V6z"></path></svg>
                     </span>
                     <span class="button-label">Run</span>
+                </button>
+                <button class="btn-debug" onclick="debugCode()" type="button" title="Ctrl+Shift+Enter">
+                    <span class="btn-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M9 3h6"></path><path d="M10 3v3"></path><path d="M14 3v3"></path><path d="M8 9h8"></path><path d="M7 6h10l3 4v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4v-6l3-4z"></path><path d="M9 13h.01"></path><path d="M15 13h.01"></path><path d="M9 17h6"></path></svg>
+                    </span>
+                    <span class="button-label">Debug</span>
                 </button>
                 <button class="btn-format" onclick="formatEditorCode()" type="button" title="Ctrl+Shift+F">
                     <span class="btn-icon" aria-hidden="true">
@@ -135,9 +141,15 @@
                                 <option value="IBM Plex Mono">IBM Plex Mono</option>
                                 <option value="JetBrains Mono">JetBrains Mono</option>
                                 <option value="Fira Code">Fira Code</option>
+                                <option value="Victor Mono">Victor Mono</option>
+                                <option value="Inconsolata">Inconsolata</option>
+                                <option value="Azeret Mono">Azeret Mono</option>
                                 <option value="Source Code Pro">Source Code Pro</option>
                                 <option value="Roboto Mono">Roboto Mono</option>
                                 <option value="Space Mono">Space Mono</option>
+                                <option value="Ubuntu Mono">Ubuntu Mono</option>
+                                <option value="Courier Prime">Courier Prime</option>
+                                <option value="Anonymous Pro">Anonymous Pro</option>
                             </select>
                         </label>
                         <label class="editor-control">
@@ -165,6 +177,35 @@
             <div class="output-panel">
                 <div class="panel-header">Natija</div>
                 <div class="output-content" id="output">Natija bu yerda ko'rsatiladi...</div>
+                <div class="debug-panel" id="debug-panel">
+                    <div class="debug-toolbar">
+                        <div class="debug-meta">
+                            <div class="debug-badge">Debugger</div>
+                            <div class="debug-summary" id="debug-summary">Debug sessiya hali boshlanmagan.</div>
+                        </div>
+                        <div class="debug-nav">
+                            <button type="button" id="debug-prev">Oldingi</button>
+                            <button type="button" id="debug-next">Keyingi</button>
+                            <button type="button" id="debug-breakpoint">Breakpoint</button>
+                            <button type="button" id="debug-close">Yopish</button>
+                        </div>
+                    </div>
+                    <div class="debug-body">
+                        <div class="debug-step-card">
+                            <div class="debug-step-header">
+                                <span id="debug-step-counter">0 / 0</span>
+                                <span id="debug-step-location">Qator tanlanmagan</span>
+                            </div>
+                            <pre class="debug-step-line" id="debug-step-line">Debugger qadamlarini ko'rish uchun "Debug" tugmasini bosing.</pre>
+                        </div>
+                        <div class="debug-vars-card">
+                            <div class="debug-vars-title">O'zgaruvchilar</div>
+                            <div class="debug-vars-list" id="debug-vars-list">
+                                <div class="debug-empty">Hali ko'rsatish uchun qadam yo'q.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="output-input-host" id="output-input-host"></div>
             </div>
         </div>
