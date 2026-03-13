@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
+import logging
 from passlib.context import CryptContext
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -22,6 +23,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ARENA_JWT_EXPIRE_MINUTES", "60"))  
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer(auto_error=False)
+logger = logging.getLogger(__name__)
 
 
 def normalize_password(password: str) -> bytes:
@@ -88,9 +90,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> dict:
         raise
     except Exception as exc:
         # Capture unexpected errors to help debug 500s in production
-        import logging
-
-        logging.getLogger(__name__).exception("Register failed: %s", exc)
+        logger.error("Register failed: %s", exc, exc_info=True)
         db.rollback()
         raise HTTPException(status_code=500, detail="Registration failed")
 

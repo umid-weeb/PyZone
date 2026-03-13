@@ -15,6 +15,13 @@ from app.core.config import get_settings
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
+def normalize_password(password: str) -> bytes:
+    """
+    bcrypt accepts up to 72 BYTES. Encode and truncate to 72 bytes.
+    """
+    return (password or "").encode("utf-8")[:72]
+
+
 @dataclass
 class User:
     id: int
@@ -51,7 +58,7 @@ class UserService:
             conn.commit()
 
     def create_user(self, username: str, password: str, country: str | None) -> bool:
-        password_hash = pwd_context.hash(password)
+        password_hash = pwd_context.hash(normalize_password(password))
         now = time.time()
         try:
             with self._connect() as conn:
@@ -72,7 +79,7 @@ class UserService:
             ).fetchone()
         if not row:
             return None
-        if not pwd_context.verify(password, row["password_hash"]):
+        if not pwd_context.verify(normalize_password(password), row["password_hash"]):
             return None
         return User(
             id=row["id"],
