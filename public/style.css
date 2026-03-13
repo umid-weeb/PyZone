@@ -235,6 +235,30 @@ body.dark-mode .container {
   color: var(--debug-accent-strong);
 }
 
+.btn-arena {
+  background: rgba(15, 118, 110, 0.1);
+  color: var(--success);
+  border-color: rgba(15, 118, 110, 0.18);
+}
+
+.btn-arena:hover {
+  background: color-mix(in srgb, rgba(15, 118, 110, 0.16) 74%, var(--surface));
+  border-color: rgba(15, 118, 110, 0.32);
+  color: #0b8b80;
+}
+
+body.dark-mode .btn-arena {
+  background: rgba(94, 234, 212, 0.12);
+  color: #7ef2da;
+  border-color: rgba(94, 234, 212, 0.18);
+}
+
+body.dark-mode .btn-arena:hover {
+  background: rgba(94, 234, 212, 0.18);
+  border-color: rgba(94, 234, 212, 0.28);
+  color: #b4fff0;
+}
+
 .btn-format {
   background: var(--surface);
   border-color: var(--border-strong);

@@ -1,0 +1,6 @@
+fastapi==0.115.12
+uvicorn[standard]==0.34.0
+httpx==0.28.1
+PyYAML==6.0.2
+celery==5.5.1
+redis==5.2.1

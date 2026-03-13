@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pyzone Arena</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/eclipse.min.css">
+    <link rel="stylesheet" href="./arena/arena.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        window.ARENA_API_BASE = window.ARENA_API_BASE || "/api";
+    </script>
+    <script src="./arena/arena.js" defer></script>
+</head>
+<body>
+    <div class="arena-shell">
+        <aside class="arena-sidebar">
+            <div class="arena-brand">
+                <a class="arena-back" href="./index.html">Editor</a>
+                <div>
+                    <div class="arena-title">Arena</div>
+                    <div class="arena-subtitle">LeetCode-style Python solving workspace</div>
+                </div>
+            </div>
+            <div class="arena-sidebar-tools">
+                <input id="problem-search" class="arena-search" type="search" placeholder="Masala qidiring">
+                <button id="refresh-problems" class="arena-link-button" type="button">GitHub dan yangilash</button>
+            </div>
+            <div class="arena-list-meta" id="problem-list-meta">Problemlar yuklanmoqda...</div>
+            <div class="problem-list" id="problem-list"></div>
+        </aside>
+
+        <main class="arena-main">
+            <section class="arena-description">
+                <header class="description-header">
+                    <div>
+                        <div class="problem-badge" id="problem-difficulty">Easy</div>
+                        <h1 id="problem-title">Problem loading...</h1>
+                    </div>
+                    <div class="problem-meta" id="problem-meta"></div>
+                </header>
+                <div class="description-body markdown-body" id="problem-description"></div>
+            </section>
+
+            <section class="arena-workbench">
+                <header class="workbench-header">
+                    <div class="workbench-meta">
+                        <span class="meta-chip">Python</span>
+                        <span class="meta-chip" id="problem-function-name">Function</span>
+                    </div>
+                    <div class="workbench-actions">
+                        <select id="language-select" class="arena-select" disabled>
+                            <option>Python 3.11</option>
+                        </select>
+                        <button id="run-solution" class="arena-button button-run" type="button">Run</button>
+                        <button id="submit-solution" class="arena-button button-submit" type="button">Submit</button>
+                    </div>
+                </header>
+                <textarea id="arena-editor"></textarea>
+                <section class="arena-bottom">
+                    <div class="testcase-panel">
+                        <div class="panel-heading">
+                            <h2>Visible Testcases</h2>
+                            <span id="visible-case-count">0 case</span>
+                        </div>
+                        <div id="testcase-tabs" class="testcase-tabs"></div>
+                        <div class="testcase-viewer" id="testcase-viewer">
+                            Masalani tanlang.
+                        </div>
+                    </div>
+                    <div class="result-panel">
+                        <div class="panel-heading">
+                            <h2>Result</h2>
+                            <span id="submission-status-chip" class="result-chip">Idle</span>
+                        </div>
+                        <div class="result-summary" id="result-summary">
+                            Run yoki Submit tugmasini bosing.
+                        </div>
+                        <div class="result-details" id="result-details"></div>
+                    </div>
+                </section>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

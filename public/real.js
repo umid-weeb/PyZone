@@ -1401,6 +1401,10 @@ function setupBreakpoints() {
   renderDebugRangeState();
 }
 
+function openArena() {
+  window.open("./arena.html", "_blank", "noopener,noreferrer");
+}
+
 function isStackedPanelLayout() {
   return window.matchMedia("(max-width: 1080px)").matches;
 }

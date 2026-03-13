@@ -1,0 +1,13 @@
+title: Two Sum
+difficulty: easy
+time_limit: 1 second
+memory_limit: 256 MB
+function_name: twoSum
+input_format: nums, target
+output_format: indices
+constraints:
+  - 2 <= nums.length <= 10000
+  - -10^9 <= nums[i], target <= 10^9
+tags:
+  - array
+  - hashmap

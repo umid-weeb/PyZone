@@ -16,3 +16,6 @@ coverage/
 
 .idea/
 .cache/
+.data/
+backend/.data/
+backend/.cache/
