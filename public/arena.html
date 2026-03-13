@@ -12,7 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/split.js/dist/split.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
-    <script src="./arena/arena.js" defer></script>
+    <script type="module" src="./js/main.js"></script>
 </head>
 <body>
     <div class="arena-progress" id="arena-progress" aria-hidden="true">
@@ -28,6 +28,15 @@
                         <div>
                             <div class="arena-title">Arena</div>
                             <div class="arena-subtitle">LeetCode-style Python solving workspace</div>
+                        </div>
+                        <div class="user-panel" id="user-panel">
+                          <button class="user-avatar" id="user-avatar">🙂</button>
+                          <div class="user-menu" id="user-menu" hidden>
+                            <a href="/profile.html">Profile</a>
+                            <a href="/submissions.html">Submissions</a>
+                            <a href="/leaderboard.html">Leaderboard</a>
+                            <button type="button" id="logout-btn">Logout</button>
+                          </div>
                         </div>
                     </div>
 
@@ -60,6 +69,7 @@
                     </div>
 
                     <div class="problem-list-viewport" id="problem-list-viewport">
+                        <div id="problem-list-skeleton" class="empty-state">Loading problems...</div>
                         <div class="problem-list-inner" id="problem-list-inner"></div>
                     </div>
                 </div>

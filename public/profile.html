@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile | Pyzone Arena</title>
+  <link rel="stylesheet" href="./arena/arena.css">
+</head>
+<body class="profile-shell">
+  <div class="profile-header">
+    <div>
+      <h1 id="profile-username">Profile</h1>
+      <div id="profile-meta" class="profile-meta"></div>
+    </div>
+  </div>
+
+  <section class="stats-grid">
+    <div class="stat-card"><div class="label">Solved</div><div id="stat-solved" class="value">-</div></div>
+    <div class="stat-card"><div class="label">Easy</div><div id="stat-easy" class="value">-</div></div>
+    <div class="stat-card"><div class="label">Medium</div><div id="stat-medium" class="value">-</div></div>
+    <div class="stat-card"><div class="label">Hard</div><div id="stat-hard" class="value">-</div></div>
+    <div class="stat-card"><div class="label">Submissions</div><div id="stat-submissions" class="value">-</div></div>
+  </section>
+
+  <section class="activity-section">
+    <h2>Activity</h2>
+    <div id="activity-grid" class="activity-grid"></div>
+  </section>
+
+  <script type="module">
+    import { authApi, userApi } from "./js/api.js";
+    import { requireAuth, logout } from "./js/auth.js";
+    const ok = await requireAuth("/profile.html");
+    if (!ok) return;
+    const profile = await authApi.me().catch(() => null);
+    if (profile) {
+      document.getElementById("profile-username").textContent = profile.username;
+      document.getElementById("profile-meta").textContent = `${profile.country || ""} · Joined ${profile.joined_at || ""}`;
+      document.getElementById("stat-solved").textContent = profile.solved_total ?? "-";
+      document.getElementById("stat-easy").textContent = profile.solved_easy ?? "-";
+      document.getElementById("stat-medium").textContent = profile.solved_medium ?? "-";
+      document.getElementById("stat-hard").textContent = profile.solved_hard ?? "-";
+    }
+    const activity = await userApi.activity().catch(() => []);
+    renderActivity(activity);
+
+    function renderActivity(items) {
+      const container = document.getElementById("activity-grid");
+      container.innerHTML = "";
+      items.forEach((item) => {
+        const cell = document.createElement("div");
+        const count = item.count || 0;
+        cell.className = "activity-cell";
+        cell.style.opacity = Math.min(1, 0.2 + count * 0.15);
+        cell.title = `${item.date}: ${count} submissions`;
+        container.appendChild(cell);
+      });
+    }
+  </script>
+</body>
+</html>

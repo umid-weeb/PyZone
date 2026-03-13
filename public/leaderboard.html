@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leaderboard | Pyzone Arena</title>
+  <link rel="stylesheet" href="./arena/arena.css">
+</head>
+<body class="profile-shell">
+  <h1>Leaderboard</h1>
+  <div id="lb-status" class="auth-status">Loading...</div>
+  <table class="subs-table" id="lb-table">
+    <thead>
+      <tr><th>#</th><th>User</th><th>Solved</th><th>Submissions</th><th>Fastest (ms)</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <script type="module">
+    import { userApi } from "./js/api.js";
+    import { requireAuth } from "./js/auth.js";
+    const ok = await requireAuth("/leaderboard.html");
+    if (!ok) return;
+    const status = document.getElementById("lb-status");
+    try {
+      const data = await userApi.leaderboard();
+      render(data || []);
+      status.textContent = "";
+    } catch (e) {
+      status.textContent = "Failed to load leaderboard";
+    }
+
+    function render(items) {
+      const tbody = document.querySelector("#lb-table tbody");
+      tbody.innerHTML = "";
+      items.forEach((row, idx) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td>${row.username}</td>
+          <td>${row.solved || 0}</td>
+          <td>${row.submissions || 0}</td>
+          <td>${row.fastest_ms || "-"}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+  </script>
+</body>
+</html>

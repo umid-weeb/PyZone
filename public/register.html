@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register | Pyzone Arena</title>
+  <link rel="stylesheet" href="./arena/arena.css">
+</head>
+<body class="auth-shell">
+  <div class="auth-card">
+    <h1>Create Account</h1>
+    <div class="auth-field">
+      <label for="username">Username</label>
+      <input id="username" type="text" autocomplete="username">
+    </div>
+    <div class="auth-field">
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="new-password">
+    </div>
+    <div class="auth-field">
+      <label for="country">Country</label>
+      <input id="country" type="text" autocomplete="country">
+    </div>
+    <button id="register-btn" class="arena-button button-submit" type="button">Register</button>
+    <div id="auth-status" class="auth-status"></div>
+    <p>Already have an account? <a href="/login.html">Login</a></p>
+  </div>
+  <script type="module">
+    import { register } from "./js/auth.js";
+    const statusEl = document.getElementById("auth-status");
+    const btn = document.getElementById("register-btn");
+    btn.addEventListener("click", async () => {
+      statusEl.textContent = "";
+      btn.disabled = true;
+      btn.textContent = "Registering...";
+      try {
+        const payload = {
+          username: document.getElementById("username").value.trim(),
+          password: document.getElementById("password").value,
+          country: document.getElementById("country").value.trim(),
+        };
+        await register(payload);
+        window.location.href = "/arena.html";
+      } catch (error) {
+        statusEl.textContent = "Registration failed";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Register";
+      }
+    });
+  </script>
+</body>
+</html>

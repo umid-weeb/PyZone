@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Submissions | Pyzone Arena</title>
+  <link rel="stylesheet" href="./arena/arena.css">
+</head>
+<body class="profile-shell">
+  <h1>My Submissions</h1>
+  <div id="subs-status" class="auth-status">Loading...</div>
+  <table class="subs-table" id="subs-table">
+    <thead>
+      <tr><th>Problem</th><th>Status</th><th>Runtime</th><th>Memory</th><th>Date</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <script type="module">
+    import { userApi } from "./js/api.js";
+    import { requireAuth } from "./js/auth.js";
+    const ok = await requireAuth("/submissions.html");
+    if (!ok) return;
+    const status = document.getElementById("subs-status");
+    try {
+      const data = await userApi.submissions();
+      render(data || []);
+      status.textContent = "";
+    } catch (e) {
+      status.textContent = "Failed to load submissions";
+    }
+
+    function render(items) {
+      const tbody = document.querySelector("#subs-table tbody");
+      tbody.innerHTML = "";
+      items.forEach((s) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${s.problem_title || s.problem_id}</td>
+          <td class="${statusClass(s.status || s.verdict)}">${s.status || s.verdict}</td>
+          <td>${s.runtime_ms ? s.runtime_ms + " ms" : "-"}</td>
+          <td>${s.memory_kb ? Math.round(s.memory_kb / 1024) + " MB" : "-"}</td>
+          <td>${s.created_at || ""}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function statusClass(v) {
+      const val = (v || "").toLowerCase();
+      if (val === "accepted") return "status-success";
+      if (val.includes("error") || val.includes("wrong")) return "status-error";
+      return "";
+    }
+  </script>
+</body>
+</html>
