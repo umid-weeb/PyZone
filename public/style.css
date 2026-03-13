@@ -20,7 +20,6 @@
   --editor-surface: #fcfdff;
   --console-surface: #f8fafc;
   --console-border: #e2e8f0;
-  --gutter-separator: rgba(19, 32, 51, 0.18);
   --shadow-soft: 0 24px 70px rgba(15, 23, 42, 0.08);
   --shadow-panel: 0 10px 30px rgba(15, 23, 42, 0.05);
   --focus-ring: 0 0 0 3px rgba(35, 83, 215, 0.16);
@@ -47,7 +46,6 @@ body.dark-mode {
   --editor-surface: #131b2d;
   --console-surface: #0b1220;
   --console-border: #1d2a3f;
-  --gutter-separator: rgba(148, 163, 184, 0.22);
   --shadow-soft: 0 28px 80px rgba(0, 0, 0, 0.36);
   --shadow-panel: 0 18px 40px rgba(0, 0, 0, 0.28);
   --focus-ring: 0 0 0 3px rgba(91, 141, 255, 0.22);
@@ -312,25 +310,12 @@ body.dark-mode .btn-clear:hover {
 }
 
 .CodeMirror-gutters {
-  position: relative;
   border-right: 1px solid var(--border);
   background: var(--surface-muted);
 }
 
-.CodeMirror-gutters::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 2px;
-  height: 100%;
-  background: var(--gutter-separator);
-  pointer-events: none;
-}
-
 .CodeMirror-linenumber {
   color: #8b99ab;
-  padding-right: 12px;
 }
 
 .CodeMirror-cursor {
