@@ -13,6 +13,7 @@ let debugRangeStartLine = null;
 let debugRangeEndLine = null;
 let debugRangeHighlightedStartLine = null;
 let debugRangeHighlightedEndLine = null;
+let debugRangeHighlightedBodyLines = [];
 let pythonFormatterReady = false;
 
 const INDENT_SIZE = 4;
@@ -1387,6 +1388,45 @@ async function debugCode() {
   await continueDebugSession(activeDebugSession);
 }
 
+function setupBreakpoints() {
+  editor.on("gutterClick", function (cm, line, gutter) {
+    if (!["breakpoints", "CodeMirror-linenumbers"].includes(gutter)) {
+      return;
+    }
+
+    setDebugRangeFromLineClick(line + 1);
+  });
+
+  syncDebugRangeMarkers();
+  renderDebugRangeState();
+}
+
+function setupBreakpoints() {
+  editor.on("gutterClick", function (cm, line, gutter) {
+    if (!["breakpoints", "CodeMirror-linenumbers"].includes(gutter)) {
+      return;
+    }
+
+    setDebugRangeFromLineClick(line + 1);
+  });
+
+  syncDebugRangeMarkers();
+  renderDebugRangeState();
+}
+
+function setupBreakpoints() {
+  editor.on("gutterClick", function (cm, line, gutter) {
+    if (!["breakpoints", "CodeMirror-linenumbers"].includes(gutter)) {
+      return;
+    }
+
+    setDebugRangeFromLineClick(line + 1);
+  });
+
+  syncDebugRangeMarkers();
+  renderDebugRangeState();
+}
+
 function clearOutput() {
   activeRunSession = null;
   activeDebugSession = null;
@@ -1992,8 +2032,8 @@ async function continueDebugSession(session) {
       "Debug yakunlandi.",
       `Qadamlar: ${Array.isArray(resultObj.steps) ? resultObj.steps.length : 0}`,
       session.breakpoints.length
-        ? `Breakpointlar: ${session.breakpoints.join(", ")}`
-        : "Breakpointlar: yo'q",
+        ? `Nuqtalar: ${session.breakpoints.join(", ")}`
+        : "Nuqtalar: yo'q",
     ];
 
     if (session.rangeSelection?.startLine && session.rangeSelection?.endLine) {
@@ -4229,7 +4269,8 @@ function resetDebugPanelView() {
   }
 
   if (summary) {
-    summary.textContent = "Debug sessiya hali boshlanmagan.";
+    summary.textContent =
+      "Qator raqamlari yoniga bosib start va end nuqtalarni qo'ying.";
   }
 
   if (counter) {
@@ -4270,10 +4311,15 @@ function clearDebugRangeHighlights() {
     return;
   }
 
+  debugRangeHighlightedBodyLines.forEach((lineIndex) => {
+    editor.removeLineClass(lineIndex, "background", "debug-range-body-line");
+  });
+  debugRangeHighlightedBodyLines = [];
+
   if (debugRangeHighlightedStartLine !== null) {
     editor.removeLineClass(
       debugRangeHighlightedStartLine,
-      "wrap",
+      "background",
       "debug-range-start-line"
     );
     debugRangeHighlightedStartLine = null;
@@ -4282,7 +4328,7 @@ function clearDebugRangeHighlights() {
   if (debugRangeHighlightedEndLine !== null) {
     editor.removeLineClass(
       debugRangeHighlightedEndLine,
-      "wrap",
+      "background",
       "debug-range-end-line"
     );
     debugRangeHighlightedEndLine = null;
@@ -4311,18 +4357,29 @@ function getActiveDebugRangeSelection() {
 }
 
 function renderDebugRangeState() {
-  const status = document.getElementById("debug-range-status");
-  const startButton = document.getElementById("debug-set-start");
-  const endButton = document.getElementById("debug-set-end");
   const activeRange = getActiveDebugRangeSelection();
 
   clearDebugRangeHighlights();
+
+  if (
+    activeRange?.startLine &&
+    activeRange?.endLine &&
+    editor
+  ) {
+    const startLine = Math.min(activeRange.startLine, activeRange.endLine);
+    const endLine = Math.max(activeRange.startLine, activeRange.endLine);
+
+    for (let lineIndex = startLine - 1; lineIndex <= endLine - 1; lineIndex += 1) {
+      debugRangeHighlightedBodyLines.push(lineIndex);
+      editor.addLineClass(lineIndex, "background", "debug-range-body-line");
+    }
+  }
 
   if (activeRange?.startLine && editor) {
     debugRangeHighlightedStartLine = activeRange.startLine - 1;
     editor.addLineClass(
       debugRangeHighlightedStartLine,
-      "wrap",
+      "background",
       "debug-range-start-line"
     );
   }
@@ -4331,68 +4388,94 @@ function renderDebugRangeState() {
     debugRangeHighlightedEndLine = activeRange.endLine - 1;
     editor.addLineClass(
       debugRangeHighlightedEndLine,
-      "wrap",
+      "background",
       "debug-range-end-line"
     );
   }
-
-  if (status) {
-    if (!activeRange) {
-      status.textContent = "All lines";
-    } else if (activeRange.startLine && activeRange.endLine) {
-      status.textContent = `${activeRange.startLine}-qator -> ${activeRange.endLine}-qator`;
-    } else if (activeRange.startLine) {
-      status.textContent = `${activeRange.startLine}-qatordan oxirigacha`;
-    } else {
-      status.textContent = `Boshidan ${activeRange.endLine}-qatorgacha`;
-    }
-  }
-
-  if (startButton) {
-    startButton.classList.toggle("active", Boolean(activeRange?.startLine));
-  }
-
-  if (endButton) {
-    endButton.classList.toggle("active", Boolean(activeRange?.endLine));
-  }
-}
-
-function setDebugRangePoint(kind) {
-  if (!editor) {
-    return;
-  }
-
-  const lineNumber = editor.getCursor().line + 1;
-
-  if (kind === "start") {
-    debugRangeStartLine = lineNumber;
-  } else {
-    debugRangeEndLine = lineNumber;
-  }
-
-  renderDebugRangeState();
 }
 
 function clearDebugRangeSelection() {
   debugRangeStartLine = null;
   debugRangeEndLine = null;
+  syncDebugRangeMarkers();
+  renderDebugRangeState();
+}
+
+function createDebugPointMarker(kind) {
+  const marker = document.createElement("div");
+  marker.className = "debug-point-marker";
+  marker.title =
+    kind === "start" ? "Debug start nuqtasi" : "Debug end nuqtasi";
+  return marker;
+}
+
+function syncDebugRangeMarkers() {
+  if (!editor) {
+    return;
+  }
+
+  for (let lineIndex = 0; lineIndex < editor.lineCount(); lineIndex += 1) {
+    editor.setGutterMarker(lineIndex, "breakpoints", null);
+  }
+
+  if (normalizePositiveInteger(debugRangeStartLine)) {
+    editor.setGutterMarker(
+      debugRangeStartLine - 1,
+      "breakpoints",
+      createDebugPointMarker("start")
+    );
+  }
+
+  if (
+    normalizePositiveInteger(debugRangeEndLine) &&
+    debugRangeEndLine !== debugRangeStartLine
+  ) {
+    editor.setGutterMarker(
+      debugRangeEndLine - 1,
+      "breakpoints",
+      createDebugPointMarker("end")
+    );
+  }
+}
+
+function setDebugRangeFromLineClick(lineNumber) {
+  const safeLineNumber = normalizePositiveInteger(lineNumber);
+  if (!safeLineNumber) {
+    return;
+  }
+
+  if (!debugRangeStartLine) {
+    debugRangeStartLine = safeLineNumber;
+    debugRangeEndLine = null;
+  } else if (!debugRangeEndLine) {
+    if (debugRangeStartLine === safeLineNumber) {
+      debugRangeStartLine = null;
+    } else {
+      debugRangeEndLine = safeLineNumber;
+    }
+  } else if (
+    safeLineNumber === debugRangeStartLine ||
+    safeLineNumber === debugRangeEndLine
+  ) {
+    clearDebugRangeSelection();
+    return;
+  } else {
+    debugRangeStartLine = safeLineNumber;
+    debugRangeEndLine = null;
+  }
+
+  syncDebugRangeMarkers();
   renderDebugRangeState();
 }
 
 function getBreakpointLines() {
-  if (!editor) {
-    return [];
-  }
-
-  const breakpoints = [];
-  for (let lineIndex = 0; lineIndex < editor.lineCount(); lineIndex += 1) {
-    const info = editor.lineInfo(lineIndex);
-    if (info?.gutterMarkers?.breakpoints) {
-      breakpoints.push(lineIndex + 1);
-    }
-  }
-
-  return breakpoints;
+  return [
+    ...new Set(
+      [debugRangeStartLine, debugRangeEndLine]
+        .map((lineNumber) => normalizePositiveInteger(lineNumber))
+        .filter(Boolean)
+    ),
+  ].sort((left, right) => left - right);
 }
 
 function findNextBreakpointStep(startIndex = 0) {
@@ -4455,7 +4538,7 @@ function renderDebugStep(stepIndex) {
         ? ` | ${step.function}()`
         : "";
     location.textContent = `${step.line}-qator${functionLabel}${
-      step.isBreakpoint ? " | breakpoint" : ""
+      step.isBreakpoint ? " | nuqta" : ""
     }`;
   }
 
@@ -4489,24 +4572,22 @@ function renderDebugSession(resultObj, executionTime, mode) {
   const panel = document.getElementById("debug-panel");
   const summary = document.getElementById("debug-summary");
   const steps = Array.isArray(resultObj?.steps) ? resultObj.steps : [];
-  const breakpoints = Array.isArray(resultObj?.breakpointLines)
+  const points = Array.isArray(resultObj?.breakpointLines)
     ? resultObj.breakpointLines
     : [];
   const debugRange = resultObj?.debugRange || getActiveDebugRangeSelection();
   const parts = [
     `${mode === "error" ? "Debug to'xtadi" : "Debug tayyor"}`,
     `${steps.length} ta qadam`,
-    breakpoints.length
-      ? `breakpointlar: ${breakpoints.join(", ")}`
-      : "breakpointlar yo'q",
+    points.length ? `nuqtalar: ${points.join(", ")}` : "nuqtalar yo'q",
   ];
 
   if (debugRange?.startLine && debugRange?.endLine) {
-    parts.push(`range: ${debugRange.startLine}-${debugRange.endLine}`);
+    parts.push(`oralik: ${debugRange.startLine}-${debugRange.endLine}`);
   } else if (debugRange?.startLine) {
-    parts.push(`range: ${debugRange.startLine}+`);
+    parts.push(`boshlanish: ${debugRange.startLine}`);
   } else if (debugRange?.endLine) {
-    parts.push(`range: 1-${debugRange.endLine}`);
+    parts.push(`tugash: ${debugRange.endLine}`);
   }
 
   if (resultObj?.stepLimitReached) {
@@ -4559,9 +4640,6 @@ function setupDebugPanelControls() {
   const nextButton = document.getElementById("debug-next");
   const breakpointButton = document.getElementById("debug-breakpoint");
   const closeButton = document.getElementById("debug-close");
-  const setStartButton = document.getElementById("debug-set-start");
-  const setEndButton = document.getElementById("debug-set-end");
-  const clearRangeButton = document.getElementById("debug-clear-range");
 
   if (prevButton) {
     prevButton.addEventListener("click", () => {
@@ -4588,18 +4666,6 @@ function setupDebugPanelControls() {
   }
 
   resetDebugPanelView();
-  if (setStartButton) {
-    setStartButton.addEventListener("click", () => setDebugRangePoint("start"));
-  }
-
-  if (setEndButton) {
-    setEndButton.addEventListener("click", () => setDebugRangePoint("end"));
-  }
-
-  if (clearRangeButton) {
-    clearRangeButton.addEventListener("click", clearDebugRangeSelection);
-  }
-
   renderDebugRangeState();
 }
 
@@ -4979,6 +5045,12 @@ def debug_execute(
 
 async function executeDebugSession(code, inputValues, breakpoints, rangeSelection) {
   await ensureDebugExecutionEnvironment();
+  const startLineLiteral = normalizePositiveInteger(rangeSelection?.startLine)
+    ? String(rangeSelection.startLine)
+    : "None";
+  const endLineLiteral = normalizePositiveInteger(rangeSelection?.endLine)
+    ? String(rangeSelection.endLine)
+    : "None";
   const result = await pyodide.runPythonAsync(`
 import json
 result = debug_execute(
@@ -4986,8 +5058,8 @@ result = debug_execute(
     ${JSON.stringify(inputValues || [])},
     ${JSON.stringify(breakpoints || [])},
     ${DEBUG_MAX_STEPS},
-    ${JSON.stringify(rangeSelection?.startLine || null)},
-    ${JSON.stringify(rangeSelection?.endLine || null)}
+    ${startLineLiteral},
+    ${endLineLiteral}
 )
 json.dumps(result)
   `);
@@ -5074,4 +5146,17 @@ async function debugCode() {
   showOutput("Debugger ishga tushirilmoqda...", "");
   clearOutputInputHost();
   await continueDebugSession(activeDebugSession);
+}
+
+function setupBreakpoints() {
+  editor.on("gutterClick", function (cm, line, gutter) {
+    if (!["breakpoints", "CodeMirror-linenumbers"].includes(gutter)) {
+      return;
+    }
+
+    setDebugRangeFromLineClick(line + 1);
+  });
+
+  syncDebugRangeMarkers();
+  renderDebugRangeState();
 }
