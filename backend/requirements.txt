@@ -5,3 +5,5 @@ PyYAML==6.0.2
 celery==5.5.1
 redis==5.2.1
 pytest==8.3.5
+PyJWT==2.10.1
+passlib[bcrypt]==1.7.4

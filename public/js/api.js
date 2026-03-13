@@ -67,9 +67,9 @@ export async function submitSolution(problemId, code) {
 
 // Auth APIs
 export const authApi = {
-  register: (payload) => fetchJson("/auth/register", { method: "POST", body: JSON.stringify(payload) }),
-  login: (payload) => fetchJson("/auth/login", { method: "POST", body: JSON.stringify(payload) }),
-  me: () => fetchJson("/auth/me"),
+  register: (payload) => fetchJson("/api/register", { method: "POST", body: JSON.stringify(payload) }),
+  login: (payload) => fetchJson("/api/login", { method: "POST", body: JSON.stringify(payload) }),
+  me: () => fetchJson("/api/me"),
 };
 
 // User data APIs

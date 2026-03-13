@@ -33,6 +33,7 @@ Architecture:
 - `app/main.py`: FastAPI entrypoint
 - `app/api/routes/problems.py`: `GET /problems`, `GET /problem/{id}`
 - `app/api/routes/submissions.py`: `POST /run`, `POST /submit`, `GET /submission/{id}`
+- `app/api/routes/auth.py`: `POST /api/register`, `POST /api/login`, `GET /api/me`
 - `app/services/github_client.py`: reads problem files from GitHub API
 - `app/services/problem_service.py`: metadata parsing, cache orchestration, testcase loading
 - `app/services/submission_service.py`: queueing and worker execution
@@ -292,3 +293,8 @@ problems.list source=local:... github_fetch=local-ok refresh=False cache=hit ...
 - Put Nginx in front so frontend and backend share one origin.
 - For production set `ARENA_USE_INLINE_EXECUTION=false` and ensure Redis and Celery worker are running.
 - Redis cache is used automatically when reachable; otherwise filesystem cache is used.
+- Auth endpoints added:
+  - `POST /api/register` (username, password, country) -> `{ success: true, token, access_token }`
+  - `POST /api/login` -> `{ token, access_token }`
+  - `GET /api/me` -> current user profile (requires `Authorization: Bearer <token>`)
+  - JWT secret configured via `ARENA_JWT_SECRET`.

@@ -43,6 +43,7 @@ class Settings:
     frontend_api_base: str
     log_level: str
     cors_allow_origins: list[str]
+    jwt_secret: str
 
     @property
     def github_enabled(self) -> bool:
@@ -105,5 +106,6 @@ def get_settings() -> Settings:
         cache_ttl_seconds=int(os.getenv("ARENA_CACHE_TTL_SECONDS", "300")),
         frontend_api_base=os.getenv("ARENA_FRONTEND_API_BASE", "/api"),
         log_level=os.getenv("ARENA_LOG_LEVEL", "INFO").upper(),
+        jwt_secret=os.getenv("ARENA_JWT_SECRET", "dev-secret-change-me"),
         cors_allow_origins=cors_allow_origins or ["*"],
     )
