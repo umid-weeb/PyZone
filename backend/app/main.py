@@ -12,6 +12,7 @@ from app.api.routes.problems import router as problem_router
 from app.api.routes.submissions import router as submission_router
 from app.core.config import get_settings
 from app.repositories.submissions import SubmissionRepository
+from app.database import Base, engine
 
 
 settings = get_settings()
@@ -24,6 +25,8 @@ logging.basicConfig(
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     SubmissionRepository(settings.submissions_db_path)
+    # Ensure SQLAlchemy models are created (Supabase/Postgres or fallback SQLite)
+    Base.metadata.create_all(bind=engine)
     yield
 
 
@@ -31,7 +34,7 @@ app = FastAPI(title=settings.app_name, version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_allow_origins or ["https://pyzone.uz", "https://www.pyzone.uz"],
+    allow_origins=settings.cors_allow_origins or ["https://pyzone.uz", "https://www.pyzone.uz", "http://localhost"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

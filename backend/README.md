@@ -298,3 +298,7 @@ problems.list source=local:... github_fetch=local-ok refresh=False cache=hit ...
   - `POST /api/login` -> `{ token, access_token }`
   - `GET /api/me` -> current user profile (requires `Authorization: Bearer <token>`)
   - JWT secret configured via `ARENA_JWT_SECRET`.
+- Supabase / PostgreSQL auth storage:
+  - Configure `DATABASE_URL` (e.g., `postgresql+psycopg2://postgres:password@host:5432/postgres`).
+  - Models live in `app/models/user.py`; SQLAlchemy engine/session in `app/database.py`.
+  - Tables auto-created on startup via `Base.metadata.create_all(bind=engine)`.
