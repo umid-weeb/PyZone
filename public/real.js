@@ -8,6 +8,25 @@ let activeRunSession = null;
 let pythonFormatterReady = false;
 
 const INDENT_SIZE = 4;
+const EDITOR_FONT_FAMILIES = {
+  "IBM Plex Mono": '"IBM Plex Mono", monospace',
+  "JetBrains Mono": '"JetBrains Mono", monospace',
+  "Fira Code": '"Fira Code", monospace',
+  "Source Code Pro": '"Source Code Pro", monospace',
+  "Roboto Mono": '"Roboto Mono", monospace',
+  "Space Mono": '"Space Mono", monospace',
+};
+const EDITOR_FONT_SIZES = new Set([
+  "12px",
+  "14px",
+  "16px",
+  "18px",
+  "20px",
+  "22px",
+  "24px",
+]);
+const DEFAULT_EDITOR_FONT_FAMILY = "IBM Plex Mono";
+const DEFAULT_EDITOR_FONT_SIZE = "14px";
 
 const PYTHON_KEYWORDS = [
   "False",
@@ -642,6 +661,53 @@ function updateEditorStatus() {
   }
 }
 
+function applyEditorTypography(fontFamilyKey, fontSize) {
+  if (!editor) {
+    return;
+  }
+
+  const safeFontFamily = EDITOR_FONT_FAMILIES[fontFamilyKey]
+    ? fontFamilyKey
+    : DEFAULT_EDITOR_FONT_FAMILY;
+  const safeFontSize = EDITOR_FONT_SIZES.has(fontSize)
+    ? fontSize
+    : DEFAULT_EDITOR_FONT_SIZE;
+  const root = document.documentElement;
+  const wrapper = editor.getWrapperElement();
+  const fontFamilySelect = document.getElementById("editor-font-family");
+  const fontSizeSelect = document.getElementById("editor-font-size");
+
+  root.style.setProperty(
+    "--editor-font-family",
+    EDITOR_FONT_FAMILIES[safeFontFamily]
+  );
+  root.style.setProperty("--editor-font-size", safeFontSize);
+  wrapper.style.fontFamily = EDITOR_FONT_FAMILIES[safeFontFamily];
+  wrapper.style.fontSize = safeFontSize;
+
+  if (fontFamilySelect) {
+    fontFamilySelect.value = safeFontFamily;
+  }
+
+  if (fontSizeSelect) {
+    fontSizeSelect.value = safeFontSize;
+  }
+
+  localStorage.setItem("editorFontFamily", safeFontFamily);
+  localStorage.setItem("editorFontSize", safeFontSize);
+  editor.refresh();
+  updateEditorStatus();
+}
+
+function loadEditorTypographyPreferences() {
+  const savedFontFamily =
+    localStorage.getItem("editorFontFamily") || DEFAULT_EDITOR_FONT_FAMILY;
+  const savedFontSize =
+    localStorage.getItem("editorFontSize") || DEFAULT_EDITOR_FONT_SIZE;
+
+  applyEditorTypography(savedFontFamily, savedFontSize);
+}
+
 function scrollEditorToCursor() {
   if (!editor) {
     return;
@@ -912,6 +978,8 @@ function buildExecutionErrorReport(resultObj, code, executionTime) {
 
 window.addEventListener("DOMContentLoaded", function () {
   const textarea = document.getElementById("code-editor");
+  const fontFamilySelect = document.getElementById("editor-font-family");
+  const fontSizeSelect = document.getElementById("editor-font-size");
   defaultCode = textarea.value;
 
   editor = CodeMirror.fromTextArea(textarea, {
@@ -966,6 +1034,17 @@ window.addEventListener("DOMContentLoaded", function () {
   setupEditorUtilityListeners();
   loadAutoSavedCode();
   loadTheme();
+  loadEditorTypographyPreferences();
+  if (fontFamilySelect) {
+    fontFamilySelect.addEventListener("change", (event) => {
+      applyEditorTypography(event.target.value, fontSizeSelect?.value);
+    });
+  }
+  if (fontSizeSelect) {
+    fontSizeSelect.addEventListener("change", (event) => {
+      applyEditorTypography(fontFamilySelect?.value, event.target.value);
+    });
+  }
   updateEditorStatus();
   startAutoSave();
   initPyodide();

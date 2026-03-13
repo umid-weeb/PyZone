@@ -1,5 +1,7 @@
 :root {
   --shell-frame-padding: 48px;
+  --editor-font-family: "IBM Plex Mono", monospace;
+  --editor-font-size: 14px;
   --page-bg: linear-gradient(180deg, #f4f7fb 0%, #e8eef6 100%);
   --shell-bg: rgba(255, 255, 255, 0.78);
   --surface: #ffffff;
@@ -285,12 +287,99 @@ body.dark-mode .btn-clear:hover {
   text-transform: uppercase;
 }
 
+.panel-header-with-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.panel-title {
+  flex-shrink: 0;
+}
+
+.editor-header-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-left: auto;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.editor-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.editor-control-label {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.editor-select {
+  min-width: 148px;
+  min-height: 36px;
+  padding: 8px 34px 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(246, 248, 251, 0.95));
+  color: var(--text-main);
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  appearance: none;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+    linear-gradient(135deg, var(--text-muted) 50%, transparent 50%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0));
+  background-position:
+    calc(100% - 18px) calc(50% - 2px),
+    calc(100% - 12px) calc(50% - 2px),
+    0 0;
+  background-size: 6px 6px, 6px 6px, 100% 100%;
+  background-repeat: no-repeat;
+}
+
+.editor-select:hover {
+  border-color: var(--border-strong);
+  background-color: var(--surface);
+}
+
+.editor-select:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-color: var(--primary);
+}
+
+body.dark-mode .editor-select {
+  background:
+    linear-gradient(180deg, rgba(23, 35, 58, 0.98), rgba(17, 28, 50, 0.98));
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+    linear-gradient(135deg, var(--text-muted) 50%, transparent 50%),
+    linear-gradient(180deg, rgba(23, 35, 58, 0.98), rgba(17, 28, 50, 0.98));
+  border-color: var(--border);
+  color: var(--text-main);
+}
+
 .CodeMirror {
   flex: 1;
   min-height: 0;
   height: 100% !important;
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 14px;
+  font-family: var(--editor-font-family);
+  font-size: var(--editor-font-size);
   background: var(--editor-surface);
 }
 
@@ -373,7 +462,7 @@ body.dark-mode .btn-clear:hover {
   border-radius: 12px;
   box-shadow: var(--shadow-panel);
   overflow: hidden;
-  font-family: "IBM Plex Mono", monospace;
+  font-family: var(--editor-font-family);
 }
 
 .CodeMirror-hint {
@@ -622,6 +711,24 @@ body.dark-mode .btn-clear:hover {
     flex: 1 1 calc(50% - 10px);
   }
 
+  .panel-header-with-controls {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .editor-header-controls {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .editor-control {
+    flex: 1 1 220px;
+  }
+
+  .editor-select {
+    width: 100%;
+  }
+
   .output-input-row {
     flex-direction: column;
   }
@@ -654,7 +761,7 @@ body.dark-mode .btn-clear:hover {
   }
 
   .CodeMirror {
-    font-size: 13px;
+    font-size: var(--editor-font-size);
   }
 
   .editor-statusbar {
