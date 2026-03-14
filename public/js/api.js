@@ -51,17 +51,17 @@ export async function getProblem(problemId) {
   return data;
 }
 
-export async function runSolution(problemId, code) {
+export async function runSolution(problemId, code, language = "python") {
   return fetchJson("/api/run", {
     method: "POST",
-    body: JSON.stringify({ problem_id: problemId, code }),
+    body: JSON.stringify({ problem_id: problemId, code, language }),
   });
 }
 
-export async function submitSolution(problemId, code) {
+export async function submitSolution(problemId, code, language = "python") {
   return fetchJson("/api/submit", {
     method: "POST",
-    body: JSON.stringify({ problem_id: problemId, code }),
+    body: JSON.stringify({ problem_id: problemId, code, language }),
   });
 }
 

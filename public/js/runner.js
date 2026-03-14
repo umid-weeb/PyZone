@@ -13,7 +13,7 @@ export async function handleRun(ui) {
   ui.runBtn.disabled = true;
   ui.runBtn.textContent = "Running...";
   try {
-    const data = await runSolution(problemId, getCode());
+    const data = await runSolution(problemId, getCode(), currentLanguage(ui));
     renderRunResult(ui, data);
   } catch (error) {
     renderResultMessage(ui, "Execution failed");
@@ -39,7 +39,7 @@ export async function handleSubmit(ui) {
   ui.submitBtn.disabled = true;
   ui.submitBtn.textContent = "Submitting...";
   try {
-    const data = await submitSolution(problemId, getCode());
+    const data = await submitSolution(problemId, getCode(), currentLanguage(ui));
     await pollSubmission(ui, data.submission_id);
   } catch (error) {
     renderResultMessage(ui, "Execution failed");
@@ -130,6 +130,8 @@ function toggleResultLoading(ui, isLoading, text = "Working...") {
     ui.resultDetails.textContent = "";
     ui.statusChip.textContent = "Running";
     ui.statusChip.className = "result-chip status-pending";
+  } else {
+    ui.statusChip.className = "result-chip";
   }
 }
 
@@ -137,6 +139,10 @@ function openAuthModal() {
   const modal = document.getElementById("auth-modal");
   if (!modal) return;
   modal.removeAttribute("hidden");
+}
+
+function currentLanguage(ui) {
+  return ui.languageSelect?.value || "python";
 }
 
 function delay(ms) {

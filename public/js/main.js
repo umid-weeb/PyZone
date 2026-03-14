@@ -48,6 +48,7 @@ function collectUi() {
   ui.authModalContinue = document.getElementById("auth-modal-continue");
   ui.searchInput = document.getElementById("problem-search");
   ui.difficultyFilters = document.querySelectorAll("[data-difficulty]");
+  ui.languageSelect = document.getElementById("language-select");
 }
 
 function bindEvents() {
@@ -88,6 +89,13 @@ function bindEvents() {
         });
         ui.difficultyFilters.forEach((b) => b.classList.toggle("is-active", b === btn));
       });
+    });
+  }
+  if (ui.languageSelect) {
+    const savedLang = localStorage.getItem("arena_language");
+    if (savedLang) ui.languageSelect.value = savedLang;
+    ui.languageSelect.addEventListener("change", (e) => {
+      localStorage.setItem("arena_language", e.target.value);
     });
   }
 }

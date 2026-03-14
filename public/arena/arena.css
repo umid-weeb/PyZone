@@ -650,6 +650,16 @@ textarea {
   font-weight: 700;
 }
 
+.language-select {
+  min-height: 36px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--arena-border);
+  background: rgba(8, 15, 28, 0.9);
+  color: var(--arena-text);
+  font-weight: 700;
+}
+
 .meta-chip-muted {
   color: var(--arena-muted);
   background: rgba(148, 168, 196, 0.08);
