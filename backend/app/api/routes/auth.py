@@ -7,13 +7,12 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 import logging
-from passlib.context import CryptContext
+import bcrypt
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User
-from app.models.user_profile import UserProfile
 
 
 router = APIRouter(tags=["auth"])
@@ -21,8 +20,6 @@ router = APIRouter(tags=["auth"])
 SECRET_KEY = os.getenv("ARENA_JWT_SECRET", os.getenv("JWT_SECRET", "dev-secret-change-me"))
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ARENA_JWT_EXPIRE_MINUTES", "60"))  # default 60 minutes
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
 
@@ -35,9 +32,9 @@ def normalize_password(password: str) -> bytes:
 
 
 class RegisterRequest(BaseModel):
+    full_name: str = Field(min_length=1, max_length=255)
     username: str = Field(min_length=3, max_length=50)
-    password: str = Field(min_length=6, max_length=128)
-    country: str | None = None
+    password: str = Field(min_length=4, max_length=128)
 
 
 class LoginRequest(BaseModel):
@@ -62,11 +59,15 @@ class MeResponse(BaseModel):
 
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(normalize_password(password))
+    # Use the bcrypt library directly to avoid backend detection issues that caused 500s
+    return bcrypt.hashpw(normalize_password(password), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(password: str, hashed: str) -> bool:
-    return pwd_context.verify(normalize_password(password), hashed)
+    try:
+        return bcrypt.checkpw(normalize_password(password), hashed.encode("utf-8"))
+    except ValueError:
+        return False
 
 
 def create_access_token(subject: str) -> str:
@@ -78,36 +79,47 @@ def create_access_token(subject: str) -> str:
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> dict:
     try:
+        # Rule 1: username must start with "@"
+        if not payload.username.startswith("@"):
+            raise HTTPException(status_code=400, detail="Username must start with '@'")
+
+        # Rule 2: username must be unique
         existing = db.query(User).filter(User.username == payload.username).first()
         if existing:
             raise HTTPException(status_code=400, detail="Username already exists")
+
+        # Create user with hashed password
         user = User(
+            full_name=payload.full_name,
             username=payload.username,
             password_hash=get_password_hash(payload.password),
-            country=payload.country,
         )
         db.add(user)
         db.commit()
-        db.refresh(user)
-        token = create_access_token(user.username)
-        return {"success": True, "token": token, "access_token": token, "token_type": "bearer"}
+        
+        return {"message": "User created successfully"}
     except HTTPException:
         raise
     except Exception as exc:
-        # Capture unexpected errors to help debug 500s in production
-        logger.error("Register failed: %s", exc, exc_info=True)
+        import sqlalchemy
+
         db.rollback()
+        # Handle duplicate username gracefully instead of crashing
+        if isinstance(exc, sqlalchemy.exc.IntegrityError):
+            logger.warning("Register integrity error (likely duplicate): %s", exc, exc_info=True)
+            raise HTTPException(status_code=400, detail="Username already exists")
+
+        logger.error("Register failed: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail="Registration failed")
 
 
-@router.post("/login", response_model=TokenResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
+@router.post("/login")
+def login(payload: LoginRequest, db: Session = Depends(get_db)) -> dict:
     try:
         user = db.query(User).filter(User.username == payload.username).first()
         if not user or not verify_password(payload.password, user.password_hash):
             raise HTTPException(status_code=401, detail="Invalid credentials")
-        token = create_access_token(user.username)
-        return TokenResponse(token=token, access_token=token)
+        return {"message": "Login success"}
     except HTTPException:
         raise
     except Exception as exc:
