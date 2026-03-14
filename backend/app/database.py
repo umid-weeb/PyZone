@@ -10,9 +10,6 @@ from sqlalchemy.engine.url import make_url
 from sqlalchemy.exc import ArgumentError
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-# Import models to ensure proper SQLAlchemy configuration
-from app.models import User  # noqa: F401
-
 # Load environment variables from .env if present (useful for local dev)
 load_dotenv()
 
