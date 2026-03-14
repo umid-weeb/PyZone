@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="uz">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pyzone Arena</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="./arena/arena.css">
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <script src="./arena-config.js"></script>
@@ -14,70 +17,8 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
     <script type="module" src="./js/main.js"></script>
-    <script>
-        // Profile Avatar Button Logic
-        document.addEventListener('DOMContentLoaded', function() {
-            const userPanel = document.getElementById('user-panel');
-            const userAvatar = document.getElementById('user-avatar');
-            const userMenu = document.getElementById('user-menu');
-            const body = document.body;
-            
-            // Check login state - FIX: Check both token keys for compatibility
-            function checkLoginState() {
-                // Check arena_jwt (new key used by api.js) and access_token (for compatibility)
-                const token = localStorage.getItem('arena_jwt') || localStorage.getItem('access_token');
-                if (token) {
-                    // User is logged in - show avatar with dropdown
-                    userPanel.style.display = 'flex';
-                    userMenu.innerHTML = `
-                        <a href="/profile.html">Profile</a>
-                        <a href="/submissions.html">Submissions</a>
-                        <a href="/leaderboard.html">Rating</a>
-                        <a href="/settings.html">Settings</a>
-                        <button type="button" onclick="logout()">Logout</button>
-                    `;
-                } else {
-                    // User is not logged in - show Login/Sign Up
-                    userPanel.style.display = 'flex';
-                    userMenu.innerHTML = `
-                        <a href="/login.html">Login</a>
-                        <a href="/register.html">Sign Up</a>
-                    `;
-                }
-            }
-            
-            // Toggle dropdown menu
-            function toggleMenu() {
-                userMenu.classList.toggle('is-open');
-            }
-            
-            // Close dropdown when clicking outside
-            body.addEventListener('click', function(e) {
-                if (!userPanel.contains(e.target)) {
-                    userMenu.classList.remove('is-open');
-                }
-            });
-            
-            // Close dropdown on ESC key
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    userMenu.classList.remove('is-open');
-                }
-            });
-            
-            // Logout function - FIX: Remove both token keys
-            window.logout = function() {
-                localStorage.removeItem('arena_jwt');
-                localStorage.removeItem('access_token');
-                userMenu.classList.remove('is-open');
-                checkLoginState();
-            };
-            
-            // Initialize
-            checkLoginState();
-        });
-    </script>
 </head>
+
 <body>
     <div class="arena-progress" id="arena-progress" aria-hidden="true">
         <div class="arena-progress-bar"></div>
@@ -93,21 +34,21 @@
                             <div class="arena-title">Zone</div>
                         </div>
                         <div class="nav-search">
-                          <input id="nav-user-search" type="search" placeholder="Search users" autocomplete="off" />
-                          <div id="nav-search-results" class="nav-search-results" hidden></div>
+                            <input id="nav-user-search" type="search" placeholder="Search users" autocomplete="off" />
+                            <div id="nav-search-results" class="nav-search-results" hidden></div>
                         </div>
                         <div class="user-panel" id="user-panel">
-                          <button class="user-avatar" id="user-avatar" aria-label="User menu">
-                            <img id="user-avatar-img" alt="" hidden />
-                            <span id="user-avatar-fallback">L</span>
-                          </button>
-                          <div class="user-menu" id="user-menu">
-                            <a href="/profile.html">Profile</a>
-                            <a href="/submissions.html">Submissions</a>
-                            <a href="/leaderboard.html">Rating</a>
-                            <a href="/settings.html">Settings</a>
-                            <button type="button" id="logout-btn">Logout</button>
-                          </div>
+                            <button class="user-avatar" id="user-avatar" aria-label="User menu">
+                                <img id="user-avatar-img" alt="" hidden />
+                                <span id="user-avatar-fallback">L</span>
+                            </button>
+                            <div class="user-menu" id="user-menu">
+                                <a href="/profile.html">Profile</a>
+                                <a href="/submissions.html">Submissions</a>
+                                <a href="/leaderboard.html">Rating</a>
+                                <a href="/settings.html">Settings</a>
+                                <button type="button" id="logout-btn">Logout</button>
+                            </div>
                         </div>
                     </div>
 
@@ -119,7 +60,8 @@
                         <div class="toolbar-row difficulty-row">
                             <button class="difficulty-chip is-active" data-difficulty="all" type="button">All</button>
                             <button class="difficulty-chip diff-easy" data-difficulty="easy" type="button">Easy</button>
-                            <button class="difficulty-chip diff-medium" data-difficulty="medium" type="button">Medium</button>
+                            <button class="difficulty-chip diff-medium" data-difficulty="medium"
+                                type="button">Medium</button>
                             <button class="difficulty-chip diff-hard" data-difficulty="hard" type="button">Hard</button>
                         </div>
                     </div>
@@ -127,9 +69,11 @@
                     <div class="arena-list-toolbar">
                         <div class="arena-list-meta" id="problem-list-meta">Problemlar yuklanmoqda...</div>
                         <div class="pagination-controls">
-                            <button id="page-prev" class="pagination-button" type="button" aria-label="Oldingi sahifa">Prev</button>
+                            <button id="page-prev" class="pagination-button" type="button"
+                                aria-label="Oldingi sahifa">Prev</button>
                             <span id="page-indicator" class="page-indicator">1 / 1</span>
-                            <button id="page-next" class="pagination-button" type="button" aria-label="Keyingi sahifa">Next</button>
+                            <button id="page-next" class="pagination-button" type="button"
+                                aria-label="Keyingi sahifa">Next</button>
                         </div>
                     </div>
 
@@ -184,7 +128,8 @@
                         </div>
                         <div class="workbench-actions">
                             <button id="run-solution" class="arena-button button-run" type="button">Run</button>
-                            <button id="submit-solution" class="arena-button button-submit" type="button">Submit</button>
+                            <button id="submit-solution" class="arena-button button-submit"
+                                type="button">Submit</button>
                         </div>
                     </header>
 
@@ -194,7 +139,8 @@
                             <span>Starter code yuklanmoqda...</span>
                         </div>
                         <div id="arena-editor" class="arena-editor"></div>
-                        <textarea id="arena-editor-fallback" class="arena-editor-fallback" spellcheck="false"></textarea>
+                        <textarea id="arena-editor-fallback" class="arena-editor-fallback"
+                            spellcheck="false"></textarea>
                     </div>
 
                     <section class="arena-bottom">
@@ -229,9 +175,11 @@
             <div class="auth-modal-actions">
                 <button id="auth-modal-signin" class="arena-button button-ghost" type="button">Sign In</button>
                 <button id="auth-modal-signup" class="arena-button button-submit" type="button">Create Account</button>
-                <button id="auth-modal-continue" class="arena-button button-run" type="button">Continue Exploring</button>
+                <button id="auth-modal-continue" class="arena-button button-run" type="button">Continue
+                    Exploring</button>
             </div>
         </div>
     </div>
 </body>
+
 </html>

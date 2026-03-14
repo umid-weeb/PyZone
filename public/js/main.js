@@ -160,7 +160,9 @@ function bindShortcuts() {
 }
 
 function hydrateUser() {
-  if (!getToken()) {
+  // Check our pocket for the VIP ticket!
+  const token = getToken() || localStorage.getItem("access_token");
+  if (!token) {
     showLoggedOutUI();
     return;
   }

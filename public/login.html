@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login | Pyzone Arena</title>
   <link rel="stylesheet" href="./arena/arena.css">
 </head>
+
 <body class="auth-shell">
   <div class="auth-card">
     <h1>Login</h1>
@@ -21,7 +23,7 @@
     <div id="auth-status" class="auth-status"></div>
     <p>New here? <a href="/register.html">Create account</a></p>
   </div>
-    <script type="module">
+  <script type="module">
     import { login } from "./js/auth.js";
     const statusEl = document.getElementById("auth-status");
     const btn = document.getElementById("login-btn");
@@ -31,15 +33,20 @@
       btn.textContent = "Logging in...";
       try {
         const next = new URLSearchParams(window.location.search).get("next") || "/arena.html";
-        await login(
+        const data = await login(
           document.getElementById("username").value.trim(),
           document.getElementById("password").value
         );
-        
+
+        // Make sure the VIP ticket is tucked safely in our pocket!
+        if (data && data.access_token) {
+          localStorage.setItem("access_token", data.access_token);
+        }
+
         // Handle pending actions after login
         const pending = new URLSearchParams(window.location.search).get("pending");
         const problem = new URLSearchParams(window.location.search).get("problem");
-        
+
         if (pending === "submit" && problem) {
           // Redirect to arena with pending action
           window.location.href = `/arena.html?problem=${encodeURIComponent(problem)}&pending=submit`;
@@ -53,11 +60,11 @@
         btn.textContent = "Login";
       }
     });
-    
+
     // Handle submit login flow
     const pending = new URLSearchParams(window.location.search).get("pending");
     const problem = new URLSearchParams(window.location.search).get("problem");
-    
+
     if (pending === "submit" && problem) {
       // Show custom message for submit login flow
       const message = document.createElement("div");
@@ -70,4 +77,5 @@
     }
   </script>
 </body>
+
 </html>
