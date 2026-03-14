@@ -20,7 +20,12 @@ export async function login(username, password) {
   const response = await authApi.login({ username, password });
   // Look inside the box for the VIP sticker!
   const ticket = response?.access_token || response?.token || response?.jwt;
-  if (ticket && ticket !== "undefined") setToken(ticket);
+  if (ticket && ticket !== "undefined") {
+    // Store in all expected pockets, including the legacy "token" key
+    setToken(ticket);
+    localStorage.setItem("token", ticket);
+    console.log("Saved token:", localStorage.getItem("token"));
+  }
   return response;
 }
 
@@ -28,7 +33,11 @@ export async function register(payload) {
   const response = await authApi.register(payload);
   // New friends get stickers too!
   const ticket = response?.access_token || response?.token || response?.jwt;
-  if (ticket && ticket !== "undefined") setToken(ticket);
+  if (ticket && ticket !== "undefined") {
+    setToken(ticket);
+    localStorage.setItem("token", ticket);
+    console.log("Saved token:", localStorage.getItem("token"));
+  }
   return response;
 }
 
