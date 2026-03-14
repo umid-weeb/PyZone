@@ -38,6 +38,20 @@ body {
   font-family: "IBM Plex Sans", sans-serif;
 }
 
+.left-panel {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.problem-description {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.editor-panel {
+  overflow: hidden;
+}
+
 button,
 input,
 select,
@@ -85,8 +99,8 @@ textarea {
 }
 
 .arena-grid {
-  display: flex;
-  gap: 0;
+  display: grid;
+  grid-template-columns: 25% 40% 35%;
   height: 100%;
 }
 
@@ -190,9 +204,9 @@ textarea {
   gap: 8px;
   padding: 10px;
   max-height: 320px;
-  overflow: auto;
-  z-index: 40;
+  overflow-y: auto;
   overflow-x: hidden;
+  z-index: 40;
 }
 .search-card {
   display: grid;
@@ -1757,8 +1771,7 @@ textarea {
   }
 
   .arena-grid {
-    flex-direction: column;
-    gap: 14px;
+    grid-template-columns: 1fr;
   }
 
   .gutter {
@@ -1827,5 +1840,23 @@ textarea {
   .heatmap-grid,
   .activity-grid {
     grid-template-columns: repeat(16, minmax(10px, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .arena-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .arena-pane-description {
+    display: none;
+  }
+
+  .arena-pane-description.is-visible {
+    display: block;
+  }
+
+  .back-to-list-btn {
+    display: inline-flex;
   }
 }

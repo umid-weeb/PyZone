@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./arena/arena.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <script src="./arena-config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/split.js/dist/split.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -29,23 +30,37 @@
                             <div class="arena-title">Zone</div>
                         </div>
                         <div class="nav-search">
-                          <input id="nav-user-search" type="search" placeholder="Search users" autocomplete="off" />
-                          <div id="nav-search-results" class="nav-search-results" hidden></div>
+                          <input id="nav-user-search" type="search" placeholder="Search users" autocomplete="off" v-model="searchQuery" @input="searchUsers(searchQuery)" />
+                          <div id="nav-search-results" class="nav-search-results" :hidden="!searchResults.length && !searchLoading">
+                            <div v-if="searchLoading" class="muted">Searching...</div>
+                            <div v-else-if="!searchResults.length && searchQuery" class="muted">No users found</div>
+                            <div v-else v-for="user in searchResults" :key="user.username" class="search-card" @click="goToProfile(user.username)">
+                              <div class="search-avatar">
+                                <img v-if="user.avatar_url" :src="user.avatar_url" :alt="user.username">
+                                <span v-else>{{ user.username[0].toUpperCase() }}</span>
+                              </div>
+                              <div class="search-meta">
+                                <div>{{ user.username }}</div>
+                                <div class="muted">{{ user.country || '' }}</div>
+                              </div>
+                              <div class="muted">{{ user.solved_total ?? '-' }}</div>
+                            </div>
+                          </div>
                         </div>
-                        <div class="auth-actions" id="auth-actions">
+                        <div class="auth-actions" id="auth-actions" v-if="!isLoggedIn" style="display: none;">
                           <a class="arena-button button-ghost" href="/login.html">Login</a>
                           <a class="arena-button button-submit" href="/register.html">Sign Up</a>
                         </div>
-                        <div class="user-panel" id="user-panel" hidden>
-                          <button class="user-avatar" id="user-avatar" aria-label="User menu">
-                            <img id="user-avatar-img" alt="" hidden />
-                            <span id="user-avatar-fallback">U</span>
+                        <div class="user-panel" id="user-panel" v-if="isLoggedIn" style="display: none;">
+                          <button class="user-avatar" id="user-avatar" aria-label="User menu" @click="toggleMenu">
+                            <img :src="avatarUrl" alt="User avatar" v-if="user">
+                            <span v-else>{{ avatarText }}</span>
                           </button>
-                          <div class="user-menu" id="user-menu">
+                          <div class="user-menu" id="user-menu" :class="{ 'is-open': isMenuOpen }">
                             <a href="/profile.html">Profile</a>
                             <a href="/submissions.html">Submissions</a>
                             <a href="/leaderboard.html">Leaderboard</a>
-                            <button type="button" id="logout-btn">Logout</button>
+                            <button type="button" @click="logout">Logout</button>
                           </div>
                         </div>
                     </div>

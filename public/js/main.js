@@ -4,6 +4,9 @@ import { loadProblemList, openProblem } from "./problems.js";
 import { handleRun, handleSubmit, renderResultMessage } from "./runner.js";
 import { getToken } from "./api.js";
 
+// Import Vue authentication UI
+import "./auth-ui.js";
+
 const ui = {};
 let navSearchVersion = 0;
 
