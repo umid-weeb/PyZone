@@ -120,7 +120,7 @@ function bindEvents() {
         return;
       }
       clearTimeout(searchTimer);
-      searchTimer = setTimeout(() => runUserSearch(q), 180);
+      searchTimer = setTimeout(() => runUserSearch(q), 300);
     });
   }
 }
