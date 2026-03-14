@@ -156,21 +156,20 @@ function bindShortcuts() {
   });
 }
 
-function hydrateUser() {
-  // 1. Tell the teacher to check the pockets immediately!
-  const pocketSticker = localStorage.getItem("userToken");
-  const legacySticker = localStorage.getItem("token");
-  const mySticker = pocketSticker || legacySticker || getToken();
+function isAuthenticated() {
+  const token = localStorage.getItem("token") || getToken();
+  return !!(token && token !== "undefined");
+}
 
-  // Debug: see what's in the legacy pocket
+function hydrateUser() {
   console.log("Auth token:", localStorage.getItem("token"));
-  
-  if (!mySticker || mySticker === "undefined") {
+  const loggedIn = isAuthenticated();
+  if (!loggedIn) {
     showLoggedOutUI();
     return;
   }
 
-  // 2. We found the sticker! Show the VIP menu right away so we don't look like guests.
+  // We found the sticker! Show the VIP menu right away so we don't look like guests.
   showLoggedInUI();
 
   import("./api.js").then(({ authApi }) =>
@@ -204,6 +203,11 @@ function hydrateUser() {
 
 function toggleUserMenu() {
   if (!ui.userMenu) return;
+  if (isAuthenticated()) {
+    renderUserMenu();
+  } else {
+    renderGuestMenu();
+  }
   ui.userMenu.classList.toggle("is-open");
 }
 
@@ -303,7 +307,7 @@ async function resumePendingAction() {
 }
 
 function showLoggedOutUI() {
-  buildLoggedOutMenu();
+  renderGuestMenu();
   if (ui.userPanel) ui.userPanel.hidden = false;
   if (ui.usernameLabel) ui.usernameLabel.textContent = "";
   if (ui.userAvatarImg) ui.userAvatarImg.hidden = true;
@@ -315,7 +319,7 @@ function showLoggedOutUI() {
 }
 
 function showLoggedInUI() {
-  buildLoggedInMenu();
+  renderUserMenu();
   if (ui.userPanel) ui.userPanel.hidden = false;
   if (ui.authActions) ui.authActions.hidden = true;
 }
@@ -338,7 +342,7 @@ function showDescriptionPane() {
   }
 }
 
-function buildLoggedOutMenu() {
+function renderGuestMenu() {
   if (!ui.userMenu) return;
   ui.userMenu.innerHTML = `
     <a href="/login.html" id="login-link">Login</a>
@@ -347,7 +351,7 @@ function buildLoggedOutMenu() {
   ui.logoutBtn = null;
 }
 
-function buildLoggedInMenu() {
+function renderUserMenu() {
   if (!ui.userMenu) return;
   ui.userMenu.innerHTML = `
     <a href="/profile.html">Profile</a>
