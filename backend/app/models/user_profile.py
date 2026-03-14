@@ -13,4 +13,4 @@ class UserProfile(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     avatar_url = Column(String(512), nullable=True)
     
-    user = relationship("User", back_populates="profile")
+    user = relationship("User", back_populates="profile", foreign_keys=[user_id])
