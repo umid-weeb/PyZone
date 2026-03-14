@@ -46,6 +46,8 @@ export async function logout() {
   localStorage.removeItem("arena_pending_action");
   localStorage.removeItem("arena_pending_problem");
   localStorage.removeItem("access_token");
+  localStorage.removeItem("userToken");
+  localStorage.removeItem("arena_jwt");
   sessionStorage.clear();
   
   // Update UI to show logged out state
@@ -68,7 +70,6 @@ function updateUIForLogout() {
   if (userMenu) {
     userMenu.innerHTML = `
       <a href="/login.html" id="login-link">Login / Sign Up</a>
-      <a href="/register.html">Sign Up</a>
     `;
   }
   if (authActions) authActions.hidden = true;

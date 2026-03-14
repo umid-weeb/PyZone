@@ -160,16 +160,15 @@ function bindShortcuts() {
 }
 
 function hydrateUser() {
-  // 1. Look in the Magic Pocket for the VIP sticker right now!
-  const pocketSticker = localStorage.getItem("userToken");
-  const mySticker = pocketSticker || getToken();
+  // 1. Tell the teacher to check the "userToken" pocket immediately!
+  const mySticker = localStorage.getItem("userToken") || getToken();
   
   if (!mySticker || mySticker === "undefined") {
     showLoggedOutUI();
     return;
   }
 
-  // 2. We found it! Show the VIP buttons (Profile/Logout) immediately.
+  // 2. We found the sticker! Show the VIP menu right away so we don't look like guests.
   showLoggedInUI();
 
   import("./api.js").then(({ authApi }) =>
@@ -335,7 +334,6 @@ function buildLoggedOutMenu() {
   if (!ui.userMenu) return;
   ui.userMenu.innerHTML = `
     <a href="/login.html" id="login-link">Login / Sign Up</a>
-    <a href="/register.html">Sign Up</a>
   `;
   ui.logoutBtn = null;
 }
@@ -343,11 +341,11 @@ function buildLoggedOutMenu() {
 function buildLoggedInMenu() {
   if (!ui.userMenu) return;
   ui.userMenu.innerHTML = `
-    <a href="/profile.html" id="profile-link">Profile</a>
-    <button type="button" id="logout-btn">Logout</button>
+    <a href="/profile.html">Profile</a>
     <a href="/submissions.html">Submissions</a>
     <a href="/leaderboard.html">Rating</a>
     <a href="/settings.html">Settings</a>
+    <button type="button" id="logout-btn">Logout</button>
   `;
   ui.logoutBtn = document.getElementById("logout-btn");
   if (ui.logoutBtn) {
