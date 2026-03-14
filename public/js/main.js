@@ -190,8 +190,14 @@ function hydrateUser() {
         }
         showLoggedInUI();
       })
-      .catch(() => {
-        showLoggedOutUI();
+      .catch((err) => {
+        // Only kick the user out if the teacher says "401 - bad ticket".
+        if (err?.status === 401) {
+          showLoggedOutUI();
+        } else {
+          console.warn("Keeping menu logged-in; /me failed for a non-auth reason:", err);
+          showLoggedInUI();
+        }
       })
   );
 }
