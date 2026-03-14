@@ -3,6 +3,7 @@ export const API_BASE_URL = window.location.hostname === "localhost" || window.l
   ? "http://localhost:8000" 
   : "https://python-editor-b87c.onrender.com";
 const TOKEN_KEY = "arena_jwt";
+const USER_TOKEN_KEY = "userToken";
 
 let problemsCache = null;
 const problemDetailCache = new Map();
@@ -13,15 +14,22 @@ function authHeaders() {
 }
 
 export function getToken() {
-  return localStorage.getItem(TOKEN_KEY) || localStorage.getItem("access_token") || "";
+  return (
+    localStorage.getItem(USER_TOKEN_KEY) ||
+    localStorage.getItem(TOKEN_KEY) ||
+    localStorage.getItem("access_token") ||
+    ""
+  );
 }
 
 export function setToken(token) {
+  if (token) localStorage.setItem(USER_TOKEN_KEY, token);
   if (token) localStorage.setItem(TOKEN_KEY, token);
   if (token) localStorage.setItem("access_token", token);
 }
 
 export function clearToken() {
+  localStorage.removeItem(USER_TOKEN_KEY);
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem("access_token");
 }

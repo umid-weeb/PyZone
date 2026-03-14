@@ -160,14 +160,15 @@ function bindShortcuts() {
 }
 
 function hydrateUser() {
-  // 1. Check our pocket for the VIP ticket immediately
-  const token = getToken() || localStorage.getItem("access_token");
-  if (!token) {
+  // 1. Look in the Magic Pocket for the VIP sticker right now!
+  const mySticker = getToken();
+  
+  if (!mySticker || mySticker === "undefined") {
     showLoggedOutUI();
     return;
   }
 
-  // 2. We have a ticket! Show the "VIP" menu right away so the user isn't confused
+  // 2. We found it! Show the VIP buttons (Profile/Logout) immediately.
   showLoggedInUI();
 
   import("./api.js").then(({ authApi }) =>

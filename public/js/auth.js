@@ -17,19 +17,19 @@ export async function requireAuth(redirectBack = "/arena.html") {
 }
 
 export async function login(username, password) {
-  const box = await authApi.login({ username, password });
-  // Check the box for the ticket and put it in the pocket
-  const ticket = box?.access_token || box?.token;
-  if (ticket) setToken(ticket);
-  return box;
+  const response = await authApi.login({ username, password });
+  // Look inside the box for the VIP sticker!
+  const ticket = response?.access_token || response?.token || response?.jwt;
+  if (ticket && ticket !== "undefined") setToken(ticket);
+  return response;
 }
 
 export async function register(payload) {
-  const box = await authApi.register(payload);
-  // Even new friends get a ticket put in their pocket immediately!
-  const ticket = box?.access_token || box?.token;
-  if (ticket) setToken(ticket);
-  return box;
+  const response = await authApi.register(payload);
+  // New friends get stickers too!
+  const ticket = response?.access_token || response?.token || response?.jwt;
+  if (ticket && ticket !== "undefined") setToken(ticket);
+  return response;
 }
 
 export async function logout() {
