@@ -142,15 +142,10 @@ def me(credentials: HTTPAuthorizationCredentials | None = Depends(security), db:
     user = db.query(User).filter(User.username == username).first()
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
-    profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
     return MeResponse(
         username=user.username,
         country=user.country,
         created_at=user.created_at,
-        avatar_url=getattr(profile, "avatar_url", None),
-        bio=getattr(profile, "bio", None),
-        github=getattr(profile, "github", None),
-        linkedin=getattr(profile, "linkedin", None),
     )
 
 
@@ -205,16 +200,11 @@ def get_current_user(credentials: HTTPAuthorizationCredentials | None = Depends(
 
 @router.get("/user/profile")
 def get_user_profile(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
     return {
         "user": {
             "username": user.username,
-            "email": user.email,
             "country": user.country,
             "created_at": user.created_at
-        },
-        "profile": {
-            "avatar_url": profile.avatar_url if profile else None
         }
     }
 
@@ -245,53 +235,8 @@ def update_password(request: PasswordUpdateRequest, user: User = Depends(get_cur
 
 @router.post("/profile/avatar")
 async def upload_avatar(avatar: UploadFile = File(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    # Validate file type
-    if not avatar.content_type.startswith('image/'):
-        raise HTTPException(status_code=400, detail="File must be an image")
-    
-    # Create uploads directory if it doesn't exist
-    import os
-    upload_dir = "public/uploads/avatars"
-    os.makedirs(upload_dir, exist_ok=True)
-    
-    # Generate unique filename
-    import uuid
-    file_extension = avatar.filename.split('.')[-1] if '.' in avatar.filename else 'jpg'
-    filename = f"{user.id}_{uuid.uuid4().hex}.{file_extension}"
-    file_path = os.path.join(upload_dir, filename)
-    
-    # Save file
-    with open(file_path, "wb") as buffer:
-        content = await avatar.read()
-        buffer.write(content)
-    
-    # Update or create profile
-    profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
-    if not profile:
-        profile = UserProfile(user_id=user.id, avatar_url=f"/uploads/avatars/{filename}")
-        db.add(profile)
-    else:
-        profile.avatar_url = f"/uploads/avatars/{filename}"
-    
-    db.commit()
-    return {"avatar_url": f"/uploads/avatars/{filename}"}
-
-
-@router.delete("/profile/avatar")
-def delete_avatar(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
-    if profile:
-        # Delete file if it exists
-        import os
-        if profile.avatar_url:
-            file_path = f"public{profile.avatar_url}"
-            if os.path.exists(file_path):
-                os.remove(file_path)
-        
-        db.delete(profile)
-        db.commit()
-    
-    return {"message": "Avatar removed successfully"}
+    # Placeholder - avatar upload requires UserProfile table
+    return {"message": "Avatar upload not available"}
 
 
 @router.post("/password/reset")

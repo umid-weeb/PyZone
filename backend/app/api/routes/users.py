@@ -21,7 +21,6 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User
-from app.models.user_profile import UserProfile
 from app.api.routes.auth import (
     ALGORITHM,
     SECRET_KEY,
@@ -48,9 +47,6 @@ class UserSearchResponse(BaseModel):
 class ProfilePayload(BaseModel):
     username: str = Field(min_length=3, max_length=50)
     country: str | None = None
-    bio: str | None = Field(default=None, max_length=500)
-    github: str | None = Field(default=None, max_length=255)
-    linkedin: str | None = Field(default=None, max_length=255)
 
 
 class PasswordChangeRequest(BaseModel):
@@ -63,10 +59,6 @@ class PublicProfile(BaseModel):
     id: int
     username: str
     country: str | None = None
-    avatar_url: str | None = None
-    github: str | None = None
-    linkedin: str | None = None
-    bio: str | None = None
 
 
 @router.get("/users/search", response_model=UserSearchResponse)
@@ -98,15 +90,10 @@ def get_public_profile(username: str, db: Session = Depends(get_db)) -> PublicPr
     user = db.query(User).filter(User.username == username).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
     return PublicProfile(
         id=user.id,
         username=user.username,
         country=user.country,
-        avatar_url=getattr(profile, "avatar_url", None),
-        github=getattr(profile, "github", None),
-        linkedin=getattr(profile, "linkedin", None),
-        bio=getattr(profile, "bio", None),
     )
 
 
@@ -125,23 +112,12 @@ def update_profile(
     current_user.username = payload.username
     current_user.country = payload.country
 
-    profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
-    if not profile:
-        profile = UserProfile(user_id=current_user.id)
-        db.add(profile)
-    profile.bio = payload.bio
-    profile.github = payload.github
-    profile.linkedin = payload.linkedin
-
     db.commit()
     db.refresh(current_user)
     return {
         "success": True,
         "username": current_user.username,
         "country": current_user.country,
-        "bio": profile.bio,
-        "github": profile.github,
-        "linkedin": profile.linkedin,
     }
 
 
@@ -185,14 +161,7 @@ def upload_avatar(
     with open(filepath, "wb") as f:
         f.write(content)
 
-    public_url = f"/uploads/avatars/{filename}"
-    profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
-    if not profile:
-        profile = UserProfile(user_id=current_user.id)
-        db.add(profile)
-    profile.avatar_url = public_url
-    db.commit()
-    return {"avatar_url": public_url}
+    return {"avatar_url": f"/uploads/avatars/{filename}"}
 
 
 @account_router.get("/user/activity")
@@ -205,5 +174,3 @@ def user_activity(current_user: User = Depends(get_current_user)) -> list:
 def user_submissions(current_user: User = Depends(get_current_user)) -> list:
     # Placeholder submissions; real implementation can pull from submissions storage
     return []
-
-
