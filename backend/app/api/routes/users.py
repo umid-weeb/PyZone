@@ -29,6 +29,7 @@ from app.api.routes.auth import (
     verify_password,
     security,
 )
+from app.api.routes.auth import get_current_user
 
 
 router = APIRouter(tags=["users"])
@@ -112,7 +113,7 @@ def get_public_profile(username: str, db: Session = Depends(get_db)) -> PublicPr
 @account_router.put("/user/profile")
 def update_profile(
     payload: ProfilePayload,
-    current_user: User = Depends(_get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
     # Check username uniqueness when changed
@@ -147,7 +148,7 @@ def update_profile(
 @account_router.post("/user/password")
 def change_password(
     payload: PasswordChangeRequest,
-    current_user: User = Depends(_get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
     if payload.new_password != payload.confirm_password:
@@ -163,7 +164,7 @@ def change_password(
 @account_router.post("/user/avatar")
 def upload_avatar(
     file: UploadFile = File(...),
-    current_user: User = Depends(_get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
     allowed_types = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
@@ -195,31 +196,14 @@ def upload_avatar(
 
 
 @account_router.get("/user/activity")
-def user_activity(current_user: User = Depends(_get_current_user)) -> list:
+def user_activity(current_user: User = Depends(get_current_user)) -> list:
     # Placeholder activity; real implementation can pull from submissions
     return []
 
 
 @account_router.get("/user/submissions")
-def user_submissions(current_user: User = Depends(_get_current_user)) -> list:
+def user_submissions(current_user: User = Depends(get_current_user)) -> list:
     # Placeholder submissions; real implementation can pull from submissions storage
     return []
 
 
-def _get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(security),
-    db: Session = Depends(get_db),
-) -> User:
-    if credentials is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
-    try:
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str | None = payload.get("sub")
-    except JWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    if not username:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    user = db.query(User).filter(User.username == username).first()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-    return user
