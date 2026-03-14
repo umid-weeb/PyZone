@@ -37,15 +37,26 @@
           document.getElementById("username").value.trim(),
           document.getElementById("password").value
         );
+        console.log("LOGIN RESPONSE:", response);
 
         // Sometimes the ticket is hidden in the box. 
         // Let's make sure we find it and put it in our pocket!
-        const ticket = response?.access_token || response?.token || response?.jwt;
+        const ticket =
+          response?.token ||
+          response?.access_token ||
+          response?.jwt ||
+          response?.access ||
+          response?.data?.token;
         if (ticket && ticket !== "undefined") {
           localStorage.setItem("userToken", ticket);
           localStorage.setItem("token", ticket);
+          localStorage.setItem("auth_token", ticket);
           localStorage.setItem("arena_jwt", ticket);
           localStorage.setItem("access_token", ticket);
+          console.log("TOKEN SAVED:", ticket);
+          console.log("LOCAL TOKEN:", localStorage.getItem("token"));
+        } else {
+          console.warn("Login succeeded but no token found in response", response);
         }
 
         // Handle pending actions after login

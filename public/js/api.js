@@ -5,6 +5,7 @@ export const API_BASE_URL = window.location.hostname === "localhost" || window.l
 const TOKEN_KEY = "arena_jwt";
 const USER_TOKEN_KEY = "userToken";
 const LEGACY_TOKEN_KEY = "token";
+const AUTH_TOKEN_KEY = "auth_token";
 
 let problemsCache = null;
 const problemDetailCache = new Map();
@@ -17,6 +18,7 @@ function authHeaders() {
 export function getToken() {
   return (
     localStorage.getItem(USER_TOKEN_KEY) ||
+    localStorage.getItem(AUTH_TOKEN_KEY) ||
     localStorage.getItem(LEGACY_TOKEN_KEY) ||
     localStorage.getItem(TOKEN_KEY) ||
     localStorage.getItem("access_token") ||
@@ -26,6 +28,7 @@ export function getToken() {
 
 export function setToken(token) {
   if (token) localStorage.setItem(USER_TOKEN_KEY, token);
+  if (token) localStorage.setItem(AUTH_TOKEN_KEY, token);
   if (token) localStorage.setItem(LEGACY_TOKEN_KEY, token);
   if (token) localStorage.setItem(TOKEN_KEY, token);
   if (token) localStorage.setItem("access_token", token);
@@ -33,6 +36,7 @@ export function setToken(token) {
 
 export function clearToken() {
   localStorage.removeItem(USER_TOKEN_KEY);
+  localStorage.removeItem(AUTH_TOKEN_KEY);
   localStorage.removeItem(LEGACY_TOKEN_KEY);
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem("access_token");

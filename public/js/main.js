@@ -157,7 +157,12 @@ function bindShortcuts() {
 }
 
 function isAuthenticated() {
-  const token = localStorage.getItem("token") || getToken();
+  const token =
+    localStorage.getItem("token") ||
+    localStorage.getItem("access_token") ||
+    localStorage.getItem("auth_token") ||
+    getToken();
+  console.log("AUTH TOKEN DETECTED:", token);
   return !!(token && token !== "undefined");
 }
 

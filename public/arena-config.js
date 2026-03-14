@@ -1,0 +1,1 @@
+window.ARENA_CONFIG = {};
