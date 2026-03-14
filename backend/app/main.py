@@ -5,10 +5,11 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.routes.health import router as health_router
 from app.api.routes.auth import router as auth_router
-from app.api.routes.users import router as user_router
+from app.api.routes.users import router as user_router, account_router
 from app.api.routes.problems import router as problem_router
 from app.api.routes.submissions import router as submission_router
 from app.core.config import get_settings
@@ -47,6 +48,12 @@ app.include_router(submission_router, prefix=settings.api_prefix)
 app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(user_router, prefix=settings.api_prefix)
+app.include_router(account_router)
+
+# Serve uploaded avatars
+uploads_root = settings.backend_root / "uploads"
+uploads_root.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=uploads_root), name="uploads")
 
 
 @app.get("/")

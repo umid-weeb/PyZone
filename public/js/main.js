@@ -44,6 +44,8 @@ function collectUi() {
   ui.userAvatarFallback = document.getElementById("user-avatar-fallback");
   ui.usernameLabel = document.getElementById("navbar-username");
   ui.userMenu = document.getElementById("user-menu");
+  ui.userPanel = document.getElementById("user-panel");
+  ui.authActions = document.getElementById("auth-actions");
   ui.logoutBtn = document.getElementById("logout-btn");
   ui.authModal = document.getElementById("auth-modal");
   ui.authModalClose = document.getElementById("auth-modal-close");
@@ -143,7 +145,10 @@ function bindShortcuts() {
 }
 
 function hydrateUser() {
-  if (!getToken() || !ui.userAvatar) return;
+  if (!getToken()) {
+    showLoggedOutUI();
+    return;
+  }
   import("./api.js").then(({ authApi }) =>
     authApi
       .me()
@@ -156,8 +161,11 @@ function hydrateUser() {
           ui.userAvatarImg.hidden = false;
           ui.userAvatarFallback.hidden = true;
         }
+        showLoggedInUI();
       })
-      .catch(() => {})
+      .catch(() => {
+        showLoggedOutUI();
+      })
   );
 }
 
@@ -250,4 +258,20 @@ async function resumePendingAction() {
   localStorage.removeItem("arena_pending_action");
   localStorage.removeItem("arena_pending_problem");
   setTimeout(() => handleSubmit(ui), 150);
+}
+
+function showLoggedOutUI() {
+  if (ui.userPanel) ui.userPanel.hidden = true;
+  if (ui.usernameLabel) ui.usernameLabel.textContent = "";
+  if (ui.userAvatarImg) ui.userAvatarImg.hidden = true;
+  if (ui.userAvatarFallback) {
+    ui.userAvatarFallback.hidden = false;
+    ui.userAvatarFallback.textContent = "U";
+  }
+  if (ui.authActions) ui.authActions.hidden = false;
+}
+
+function showLoggedInUI() {
+  if (ui.userPanel) ui.userPanel.hidden = false;
+  if (ui.authActions) ui.authActions.hidden = true;
 }

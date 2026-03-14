@@ -141,8 +141,8 @@ function openAuthModal() {
   if (!modal) return;
   const title = modal.querySelector("h2");
   const desc = modal.querySelector("p");
-  if (title) title.textContent = "Login Required";
-  if (desc) desc.textContent = "Please login or create an account to submit your solution.";
+  if (title) title.textContent = "Tizimga kiring";
+  if (desc) desc.textContent = "Masalani yuborish uchun avval tizimga kiring.";
   modal.removeAttribute("hidden");
 }
 

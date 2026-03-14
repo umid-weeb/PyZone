@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User
+from app.models.user_profile import UserProfile
 
 
 router = APIRouter(tags=["auth"], prefix="/api")
@@ -54,6 +55,10 @@ class MeResponse(BaseModel):
     username: str
     country: str | None = None
     created_at: datetime
+    avatar_url: str | None = None
+    bio: str | None = None
+    github: str | None = None
+    linkedin: str | None = None
 
 
 def get_password_hash(password: str) -> str:
@@ -126,7 +131,16 @@ def me(credentials: HTTPAuthorizationCredentials | None = Depends(security), db:
     user = db.query(User).filter(User.username == username).first()
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
-    return MeResponse(username=user.username, country=user.country, created_at=user.created_at)
+    profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
+    return MeResponse(
+        username=user.username,
+        country=user.country,
+        created_at=user.created_at,
+        avatar_url=getattr(profile, "avatar_url", None),
+        bio=getattr(profile, "bio", None),
+        github=getattr(profile, "github", None),
+        linkedin=getattr(profile, "linkedin", None),
+    )
 
 
 @router.post("/logout")
