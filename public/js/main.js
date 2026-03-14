@@ -161,7 +161,8 @@ function bindShortcuts() {
 
 function hydrateUser() {
   // 1. Look in the Magic Pocket for the VIP sticker right now!
-  const mySticker = getToken();
+  const pocketSticker = localStorage.getItem("userToken");
+  const mySticker = pocketSticker || getToken();
   
   if (!mySticker || mySticker === "undefined") {
     showLoggedOutUI();
@@ -333,19 +334,20 @@ function showDescriptionPane() {
 function buildLoggedOutMenu() {
   if (!ui.userMenu) return;
   ui.userMenu.innerHTML = `
-    <a href="/login.html">Login</a>
+    <a href="/login.html" id="login-link">Login / Sign Up</a>
     <a href="/register.html">Sign Up</a>
   `;
+  ui.logoutBtn = null;
 }
 
 function buildLoggedInMenu() {
   if (!ui.userMenu) return;
   ui.userMenu.innerHTML = `
-    <a href="/profile.html">Profile</a>
+    <a href="/profile.html" id="profile-link">Profile</a>
+    <button type="button" id="logout-btn">Logout</button>
     <a href="/submissions.html">Submissions</a>
     <a href="/leaderboard.html">Rating</a>
     <a href="/settings.html">Settings</a>
-    <button type="button" id="logout-btn">Logout</button>
   `;
   ui.logoutBtn = document.getElementById("logout-btn");
   if (ui.logoutBtn) {

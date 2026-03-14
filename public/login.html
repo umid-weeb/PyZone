@@ -42,6 +42,7 @@
         // Let's make sure we find it and put it in our pocket!
         const ticket = response?.access_token || response?.token || response?.jwt;
         if (ticket && ticket !== "undefined") {
+          localStorage.setItem("userToken", ticket);
           localStorage.setItem("arena_jwt", ticket);
           localStorage.setItem("access_token", ticket);
         }

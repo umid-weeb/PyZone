@@ -67,7 +67,7 @@ function updateUIForLogout() {
   if (userPanel) userPanel.hidden = false;
   if (userMenu) {
     userMenu.innerHTML = `
-      <a href="/login.html">Login</a>
+      <a href="/login.html" id="login-link">Login / Sign Up</a>
       <a href="/register.html">Sign Up</a>
     `;
   }
