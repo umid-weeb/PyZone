@@ -361,7 +361,7 @@ function renderUserMenu() {
   ui.userMenu.innerHTML = `
     <a href="/profile.html">Profile</a>
     <a href="/submissions.html">Submissions</a>
-    <a href="/leaderboard.html">Rating</a>
+    <a href="/rating.html">Rating</a>
     <a href="/settings.html">Settings</a>
     <button type="button" id="logout-btn">Logout</button>
   `;
