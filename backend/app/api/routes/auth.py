@@ -32,7 +32,6 @@ def normalize_password(password: str) -> bytes:
 
 
 class RegisterRequest(BaseModel):
-    full_name: str = Field(min_length=1, max_length=255)
     username: str = Field(min_length=3, max_length=50)
     password: str = Field(min_length=4, max_length=128)
     country: str | None = None
@@ -80,6 +79,10 @@ def create_access_token(subject: str) -> str:
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> dict:
     try:
+        # Username must start with "@"
+        if not payload.username.startswith("@"):
+            raise HTTPException(status_code=400, detail="Username must start with '@'")
+
         # Username must be unique
         existing = db.query(User).filter(User.username == payload.username).first()
         if existing:
@@ -89,11 +92,11 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> dict:
         user = User(
             username=payload.username,
             password_hash=get_password_hash(payload.password),
-            full_name=payload.full_name,
             country=payload.country,
         )
         db.add(user)
         db.commit()
+        db.refresh(user)
         
         return {"message": "User created successfully"}
     except HTTPException:
@@ -108,7 +111,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> dict:
             raise HTTPException(status_code=400, detail="Username already exists")
 
         # Print the real error for debugging
-        logger.error("Register failed: %s", exc, exc_info=True)
+        logger.error("REGISTER ERROR: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=str(exc))
 
 
