@@ -85,8 +85,8 @@ function bindEvents() {
   }
   if (ui.authModalClose) ui.authModalClose.addEventListener("click", closeAuthModal);
   if (ui.authModalContinue) ui.authModalContinue.addEventListener("click", closeAuthModal);
-  if (ui.authModalSignin) ui.authModalSignin.addEventListener("click", () => redirectToAuth("login.html"));
-  if (ui.authModalSignup) ui.authModalSignup.addEventListener("click", () => redirectToAuth("register.html"));
+  if (ui.authModalSignin) ui.authModalSignin.addEventListener("click", () => redirectToAuth("login"));
+  if (ui.authModalSignup) ui.authModalSignup.addEventListener("click", () => redirectToAuth("register"));
   if (ui.backToListBtn) {
     ui.backToListBtn.addEventListener("click", () => {
       showListPane();
@@ -464,8 +464,8 @@ function showDescriptionPane() {
 function renderGuestMenu() {
   if (!ui.userMenu) return;
   ui.userMenu.innerHTML = `
-    <a href="/login.html" id="login-link">Login</a>
-    <a href="/register.html" id="signup-link">Sign Up</a>
+    <a href="/login" id="login-link">Login</a>
+    <a href="/register" id="signup-link">Sign Up</a>
   `;
   ui.logoutBtn = null;
 }

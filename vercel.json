@@ -15,12 +15,40 @@
       "source": "/zone/",
       "destination": "/zone",
       "permanent": true
+    },
+    {
+      "source": "/login.html",
+      "destination": "/login",
+      "permanent": true
+    },
+    {
+      "source": "/register.html",
+      "destination": "/register",
+      "permanent": true
+    },
+    {
+      "source": "/login/",
+      "destination": "/login",
+      "permanent": true
+    },
+    {
+      "source": "/register/",
+      "destination": "/register",
+      "permanent": true
     }
   ],
   "rewrites": [
     {
       "source": "/zone",
       "destination": "/arena.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/login.html"
+    },
+    {
+      "source": "/register",
+      "destination": "/register.html"
     }
   ]
 }

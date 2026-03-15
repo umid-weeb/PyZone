@@ -50,7 +50,14 @@ export async function fetchJson(path, options = {}) {
   });
   if (!resp.ok) {
     const text = await resp.text();
-    const err = new Error(text || `HTTP ${resp.status}`);
+    let message = text || `HTTP ${resp.status}`;
+    try {
+      const parsed = JSON.parse(text);
+      message = parsed?.detail || parsed?.message || message;
+    } catch {
+      // Keep the raw response text when the body is not JSON.
+    }
+    const err = new Error(message);
     err.status = resp.status;
     throw err;
   }

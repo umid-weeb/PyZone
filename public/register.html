@@ -23,9 +23,10 @@
     </div>
     <button id="register-btn" class="arena-button button-submit" type="button">Register</button>
     <div id="auth-status" class="auth-status"></div>
-    <p>Already have an account? <a href="/login.html">Login</a></p>
+    <p>Already have an account? <a href="/login">Login</a></p>
   </div>
   <script type="module">
+    import { getToken } from "./js/api.js";
     import { register } from "./js/auth.js";
     const statusEl = document.getElementById("auth-status");
     const btn = document.getElementById("register-btn");
@@ -52,6 +53,9 @@
           return;
         }
         await register(payload);
+        if (!getToken()) {
+          throw new Error("Token was not persisted after registration");
+        }
         
         // Handle pending actions after registration
         const next = new URLSearchParams(window.location.search).get("next") || "/zone";
@@ -65,7 +69,7 @@
           window.location.href = next;
         }
       } catch (error) {
-        statusEl.textContent = "Registration failed";
+        statusEl.textContent = error?.message || "Registration failed";
       } finally {
         btn.disabled = false;
         btn.textContent = "Register";

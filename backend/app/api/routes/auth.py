@@ -77,28 +77,29 @@ def create_access_token(subject: str) -> str:
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
-def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> dict:
+def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> TokenResponse:
     try:
-        # Username must start with "@"
-        if not payload.username.startswith("@"):
-            raise HTTPException(status_code=400, detail="Username must start with '@'")
+        username = payload.username.strip()
+        if len(username) < 3:
+            raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
 
         # Username must be unique
-        existing = db.query(User).filter(User.username == payload.username).first()
+        existing = db.query(User).filter(User.username == username).first()
         if existing:
             raise HTTPException(status_code=400, detail="Username already exists")
 
         # Create user with hashed password
         user = User(
-            username=payload.username,
+            username=username,
             password_hash=get_password_hash(payload.password),
             country=payload.country,
         )
         db.add(user)
         db.commit()
         db.refresh(user)
-        
-        return {"message": "User created successfully"}
+
+        token = create_access_token(user.username)
+        return TokenResponse(token=token, access_token=token)
     except HTTPException:
         raise
     except Exception as exc:
@@ -116,12 +117,14 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> dict:
 
 
 @router.post("/login")
-def login(payload: LoginRequest, db: Session = Depends(get_db)) -> dict:
+def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
     try:
-        user = db.query(User).filter(User.username == payload.username).first()
+        username = (payload.username or "").strip()
+        user = db.query(User).filter(User.username == username).first()
         if not user or not verify_password(payload.password, user.password_hash):
             raise HTTPException(status_code=401, detail="Invalid credentials")
-        return {"message": "Login success"}
+        token = create_access_token(user.username)
+        return TokenResponse(token=token, access_token=token)
     except HTTPException:
         raise
     except Exception as exc:

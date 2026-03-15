@@ -21,9 +21,10 @@
     </div>
     <button id="login-btn" class="arena-button button-submit" type="button">Login</button>
     <div id="auth-status" class="auth-status"></div>
-    <p>New here? <a href="/register.html">Create account</a></p>
+    <p>New here? <a href="/register">Create account</a></p>
   </div>
   <script type="module">
+    import { getToken } from "./js/api.js";
     import { login } from "./js/auth.js";
     const statusEl = document.getElementById("auth-status");
     const btn = document.getElementById("login-btn");
@@ -38,25 +39,8 @@
           document.getElementById("password").value
         );
         console.log("LOGIN RESPONSE:", response);
-
-        // Sometimes the ticket is hidden in the box. 
-        // Let's make sure we find it and put it in our pocket!
-        const ticket =
-          response?.token ||
-          response?.access_token ||
-          response?.jwt ||
-          response?.access ||
-          response?.data?.token;
-        if (ticket && ticket !== "undefined") {
-          localStorage.setItem("userToken", ticket);
-          localStorage.setItem("token", ticket);
-          localStorage.setItem("auth_token", ticket);
-          localStorage.setItem("arena_jwt", ticket);
-          localStorage.setItem("access_token", ticket);
-          console.log("TOKEN SAVED:", ticket);
-          console.log("LOCAL TOKEN:", localStorage.getItem("token"));
-        } else {
-          console.warn("Login succeeded but no token found in response", response);
+        if (!getToken()) {
+          throw new Error("Token was not persisted after login");
         }
 
         // Handle pending actions after login
@@ -70,7 +54,7 @@
           window.location.href = next;
         }
       } catch (error) {
-        statusEl.textContent = "Login failed";
+        statusEl.textContent = error?.message || "Login failed";
       } finally {
         btn.disabled = false;
         btn.textContent = "Login";

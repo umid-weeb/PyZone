@@ -1,9 +1,36 @@
 import { authApi, clearToken, getToken, setToken, fetchJson } from "./api.js";
 
+const LOGIN_PATH = "/login";
+const REGISTER_PATH = "/register";
+
+function extractAuthToken(response) {
+  return (
+    response?.token ||
+    response?.access_token ||
+    response?.jwt ||
+    response?.access ||
+    response?.data?.token ||
+    ""
+  );
+}
+
+function persistAuthToken(token) {
+  if (!token || token === "undefined") {
+    throw new Error("Auth token missing from server response");
+  }
+  setToken(token);
+  localStorage.setItem("token", token);
+  localStorage.setItem("auth_token", token);
+  localStorage.setItem("userToken", token);
+  localStorage.setItem("arena_jwt", token);
+  localStorage.setItem("access_token", token);
+  return token;
+}
+
 export async function requireAuth(redirectBack = "/zone") {
   const token = getToken();
   if (!token) {
-    window.location.href = `/login.html?next=${encodeURIComponent(redirectBack)}`;
+    window.location.href = `${LOGIN_PATH}?next=${encodeURIComponent(redirectBack)}`;
     return false;
   }
   try {
@@ -11,7 +38,7 @@ export async function requireAuth(redirectBack = "/zone") {
     return true;
   } catch {
     clearToken();
-    window.location.href = `/login.html?next=${encodeURIComponent(redirectBack)}`;
+    window.location.href = `${LOGIN_PATH}?next=${encodeURIComponent(redirectBack)}`;
     return false;
   }
 }
@@ -19,41 +46,18 @@ export async function requireAuth(redirectBack = "/zone") {
 export async function login(username, password) {
   const response = await authApi.login({ username, password });
   console.log("LOGIN RESPONSE:", response);
-  // Look inside the box for the VIP sticker!
-  const ticket =
-    response?.token ||
-    response?.access_token ||
-    response?.jwt ||
-    response?.access ||
-    response?.data?.token;
-  if (ticket && ticket !== "undefined") {
-    // Store in all expected pockets, including the legacy "token" key
-    setToken(ticket);
-    localStorage.setItem("token", ticket);
-    localStorage.setItem("auth_token", ticket);
-    console.log("Saved token:", localStorage.getItem("token"));
-  } else {
-    console.warn("Login succeeded but no token found in response", response);
-  }
+  const ticket = extractAuthToken(response);
+  persistAuthToken(ticket);
+  console.log("Saved token:", localStorage.getItem("token"));
   return response;
 }
 
 export async function register(payload) {
   const response = await authApi.register(payload);
-  console.log("LOGIN RESPONSE:", response);
-  // New friends get stickers too!
-  const ticket =
-    response?.token ||
-    response?.access_token ||
-    response?.jwt ||
-    response?.access ||
-    response?.data?.token;
-  if (ticket && ticket !== "undefined") {
-    setToken(ticket);
-    localStorage.setItem("token", ticket);
-    localStorage.setItem("auth_token", ticket);
-    console.log("Saved token:", localStorage.getItem("token"));
-  }
+  console.log("REGISTER RESPONSE:", response);
+  const ticket = extractAuthToken(response);
+  persistAuthToken(ticket);
+  console.log("Saved token:", localStorage.getItem("token"));
   return response;
 }
 
@@ -94,8 +98,8 @@ function updateUIForLogout() {
   if (userPanel) userPanel.hidden = false;
   if (userMenu) {
     userMenu.innerHTML = `
-      <a href="/login.html" id="login-link">Login</a>
-      <a href="/register.html" id="signup-link">Sign Up</a>
+      <a href="${LOGIN_PATH}" id="login-link">Login</a>
+      <a href="${REGISTER_PATH}" id="signup-link">Sign Up</a>
     `;
   }
   if (authActions) authActions.hidden = true;
