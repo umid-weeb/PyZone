@@ -159,6 +159,7 @@ export default function ArenaPage() {
         <CodeEditorPanel
           code={code}
           language={language}
+          hiddenTestCount={selectedProblem?.hidden_testcase_count || 0}
           isRunning={isRunning}
           isSubmitting={isSubmitting}
           onChange={setCode}

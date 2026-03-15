@@ -12,6 +12,7 @@ function Spinner() {
 }
 
 export default function ResultPanel({ result, busy = false }) {
+  const hasDetails = Boolean(result.details?.length);
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
       <div className="flex shrink-0 items-start justify-between gap-3 border-b border-arena-border px-[22px] py-[18px]">
@@ -30,13 +31,13 @@ export default function ResultPanel({ result, busy = false }) {
         </span>
       </div>
       <div className="min-h-0 flex-1 space-y-3 overflow-auto px-[22px] pb-[22px] pt-[18px]">
-        {busy && !result.details?.length ? (
+        {busy && !hasDetails ? (
           <div className="flex items-center gap-3 rounded-[18px] border border-arena-border bg-white/5 px-4 py-[14px] text-sm text-arena-muted">
             <Spinner />
             <span>Waiting for the judge to finish execution...</span>
           </div>
         ) : null}
-        {result.details?.length ? (
+        {hasDetails ? (
           result.details.map((entry) => (
             <div
               key={entry.id}

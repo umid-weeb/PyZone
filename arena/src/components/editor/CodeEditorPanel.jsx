@@ -12,6 +12,7 @@ export default function CodeEditorPanel({
   language,
   isRunning,
   isSubmitting,
+  hiddenTestCount = 0,
   onChange,
   onLanguageChange,
   onRun,
@@ -33,7 +34,9 @@ export default function CodeEditorPanel({
           <span className="rounded-[14px] bg-[rgba(108,146,255,0.12)] px-[14px] py-2.5 text-arena-primaryStrong">
             Function
           </span>
-          <span className="rounded-[14px] bg-white/5 px-[14px] py-2.5 text-arena-muted">0 hidden</span>
+          <span className="rounded-[14px] bg-white/5 px-[14px] py-2.5 text-arena-muted">
+            {hiddenTestCount > 0 ? `${hiddenTestCount} yashirin` : "Yashirin testlar yo'q"}
+          </span>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button

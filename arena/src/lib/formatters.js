@@ -31,6 +31,38 @@ export function formatCaseResults(cases = []) {
   });
 }
 
+function translateErrorToUzbek(status, errorText = "") {
+  const normalizedStatus = String(status || "").toLowerCase();
+  const normalizedError = String(errorText || "").toLowerCase();
+
+  if (normalizedStatus.includes("time limit")) {
+    return "Kod juda uzoq ishladi. Cheksiz sikl bo‘lishi mumkin.";
+  }
+  if (normalizedStatus.includes("memory limit")) {
+    return "Xato: xotira limiti oshib ketdi.";
+  }
+  if (normalizedError.includes("zerodivisionerror")) {
+    return "Xato: nolga bo‘lish mumkin emas.";
+  }
+  if (normalizedError.includes("syntaxerror") || normalizedStatus.includes("compilation")) {
+    return "Sintaksis xatosi: kod tuzilmasini tekshiring.";
+  }
+  if (normalizedError.includes("indexerror")) {
+    return "Xato: indeks chegaradan tashqarida.";
+  }
+  if (normalizedError.includes("keyerror")) {
+    return "Xato: kalit mavjud emas.";
+  }
+  if (normalizedError.includes("typeerror")) {
+    return "Xato: noto‘g‘ri turdagi qiymat ishlatilgan.";
+  }
+  if (normalizedStatus.includes("runtime error")) {
+    return "Xato: dastur bajarilishida kutilmagan xato yuz berdi.";
+  }
+
+  return errorText || "";
+}
+
 function resolveResultTone(status) {
   const normalized = String(status || "").toLowerCase();
   if (normalized.includes("accepted")) return "success";
@@ -59,18 +91,19 @@ export function buildResultState(payload, mode = "run") {
 
   const summaryParts = [];
   if (typeof payload.passed_count === "number" && typeof payload.total_count === "number") {
-    summaryParts.push(`Passed ${payload.passed_count}/${payload.total_count}`);
+    summaryParts.push(`O'tgan testlar: ${payload.passed_count}/${payload.total_count}`);
   }
-  summaryParts.push(`Runtime: ${formatRuntime(payload.runtime_ms)}`);
-  summaryParts.push(`Memory: ${formatMemory(payload.memory_kb)}`);
+  summaryParts.push(`Vaqt: ${formatRuntime(payload.runtime_ms)}`);
+  summaryParts.push(`Xotira: ${formatMemory(payload.memory_kb)}`);
 
   return {
     tone: resolveResultTone(status),
     chip: status,
     summary:
       payload.error_text && String(status).toLowerCase() !== "accepted"
-        ? payload.error_text
-        : summaryParts.join(" | ") || (mode === "submit" ? "Submission finished." : "Execution finished."),
+        ? translateErrorToUzbek(status, payload.error_text)
+        : summaryParts.join(" | ") ||
+          (mode === "submit" ? "Yuborish yakunlandi." : "Bajarish yakunlandi."),
     details,
   };
 }
