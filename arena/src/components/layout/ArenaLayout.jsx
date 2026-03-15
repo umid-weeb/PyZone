@@ -60,6 +60,8 @@ export default function ArenaLayout({
             user={user}
             onProfile={() => navigate("/profile")}
             onSettings={() => navigate("/settings")}
+            onLogin={() => navigate("/login")}
+            onRegister={() => navigate("/register")}
             onLogout={async () => {
               await logout();
               navigate("/login");

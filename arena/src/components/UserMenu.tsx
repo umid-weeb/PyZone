@@ -16,6 +16,8 @@ type UserMenuProps = {
   onProfile: () => void;
   onSettings: () => void;
   onLogout: () => void | Promise<void>;
+  onLogin: () => void;
+  onRegister: () => void;
 };
 
 type IconProps = {
@@ -134,9 +136,10 @@ function ActionItem({ label, icon, onClick, tone = "default" }: ActionItemProps)
   );
 }
 
-export default function UserMenu({ user, onProfile, onSettings, onLogout }: UserMenuProps) {
+export default function UserMenu({ user, onProfile, onSettings, onLogout, onLogin, onRegister }: UserMenuProps) {
   const avatarSrc = useMemo(() => resolveAvatarSrc(user), [user]);
   const initials = buildInitials(user?.username);
+  const isAuthenticated = Boolean(user);
 
   return (
     <Menu as="div" className="relative">
@@ -145,14 +148,16 @@ export default function UserMenu({ user, onProfile, onSettings, onLogout }: User
         className="group flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl border border-arena-border bg-white/5 text-arena-primaryStrong shadow-[0_10px_24px_rgba(0,0,0,0.18)] transition hover:border-arena-borderStrong hover:bg-white/10 focus:outline-none focus-visible:border-arena-borderStrong focus-visible:ring-4 focus-visible:ring-[rgba(108,146,255,0.14)]"
         type="button"
       >
-        {avatarSrc ? (
+        {isAuthenticated && avatarSrc ? (
           <img
             alt={`${user?.username || "User"} avatar`}
             className="h-full w-full object-cover"
             src={avatarSrc}
           />
         ) : (
-          <span className="text-sm font-semibold tracking-[0.08em]">{initials}</span>
+          <span className="text-sm font-semibold tracking-[0.08em]">
+            {isAuthenticated ? initials : "☰"}
+          </span>
         )}
       </MenuButton>
 
@@ -165,30 +170,40 @@ export default function UserMenu({ user, onProfile, onSettings, onLogout }: User
         leaveFrom="translate-y-0 scale-100 opacity-100"
         leaveTo="translate-y-1 scale-95 opacity-0"
       >
-        <MenuItems className="absolute right-0 z-30 mt-3 w-60 origin-top-right rounded-[24px] border border-arena-border bg-[rgba(8,16,30,0.96)] p-2.5 shadow-[0_24px_60px_rgba(0,0,0,0.4)] backdrop-blur-xl focus:outline-none">
-          <div className="mb-2 rounded-[18px] border border-arena-border bg-white/[0.04] px-3.5 py-3">
-            <div className="text-[11px] uppercase tracking-[0.12em] text-arena-muted">Signed in</div>
-            <div className="mt-1 truncate text-sm font-semibold text-arena-text">{user?.username || "Arena User"}</div>
-          </div>
-
-          <div className="space-y-1">
-            <ActionItem
-              icon={<ProfileIcon className="h-4 w-4" />}
-              label="Profile"
-              onClick={onProfile}
-            />
-            <ActionItem
-              icon={<TrophyIcon className="h-4 w-4" />}
-              label="Settings"
-              onClick={onSettings}
-            />
-            <ActionItem
-              icon={<LogoutIcon className="h-4 w-4" />}
-              label="Log out"
-              onClick={onLogout}
-              tone="danger"
-            />
-          </div>
+        <MenuItems className="absolute right-0 z-30 mt-3 w-60 origin-top-right rounded-[18px] border border-arena-border bg-[rgba(15,23,42,0.95)] p-2.5 shadow-[0_24px_40px_rgba(0,0,0,0.4)] focus:outline-none">
+          {isAuthenticated ? (
+            <div className="space-y-1">
+              <ActionItem
+                icon={<ProfileIcon className="h-4 w-4" />}
+                label="Profile"
+                onClick={onProfile}
+              />
+              <ActionItem
+                icon={<TrophyIcon className="h-4 w-4" />}
+                label="Settings"
+                onClick={onSettings}
+              />
+              <ActionItem
+                icon={<LogoutIcon className="h-4 w-4" />}
+                label="Log out"
+                onClick={onLogout}
+                tone="danger"
+              />
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <ActionItem
+                icon={<ProfileIcon className="h-4 w-4" />}
+                label="Login"
+                onClick={onLogin}
+              />
+              <ActionItem
+                icon={<TrophyIcon className="h-4 w-4" />}
+                label="Create account"
+                onClick={onRegister}
+              />
+            </div>
+          )}
         </MenuItems>
       </Transition>
     </Menu>

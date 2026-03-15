@@ -36,6 +36,8 @@ export default function DashboardShell({ eyebrow, title, subtitle, actions, chil
               user={user}
               onProfile={() => navigate("/profile")}
               onSettings={() => navigate("/settings")}
+              onLogin={() => navigate("/login")}
+              onRegister={() => navigate("/register")}
               onLogout={async () => {
                 await logout();
                 navigate("/login");
