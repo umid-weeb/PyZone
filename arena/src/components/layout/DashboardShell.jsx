@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 import UserQuickSearch from "../common/UserQuickSearch.jsx";
+import UserMenu from "../UserMenu.tsx";
 import styles from "./DashboardShell.module.css";
 
 const navItems = [
@@ -31,24 +32,15 @@ export default function DashboardShell({ eyebrow, title, subtitle, actions, chil
         <div className={styles.tools}>
           <UserQuickSearch />
           <div className={styles.account}>
-            <button
-              type="button"
-              className={styles.avatar}
-              onClick={() => navigate("/profile")}
-              aria-label="Open profile"
-            >
-              {(user?.username || "U").slice(0, 2).toUpperCase()}
-            </button>
-            <button
-              className={styles.logout}
-              type="button"
-              onClick={async () => {
+            <UserMenu
+              user={user}
+              onProfile={() => navigate("/profile")}
+              onSettings={() => navigate("/settings")}
+              onLogout={async () => {
                 await logout();
                 navigate("/login");
               }}
-            >
-              Logout
-            </button>
+            />
           </div>
         </div>
       </header>

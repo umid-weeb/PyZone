@@ -54,12 +54,12 @@ export default function ArenaLayout({
             <div className="mt-0.5 text-sm text-arena-muted">Competitive coding workspace</div>
           </div>
         </div>
-        <div className="flex items-center gap-3.5 max-[860px]:w-full max-[860px]:flex-wrap max-[860px]:justify-between">
+        <div className="flex items-center gap-3 max-[860px]:w-full max-[860px]:flex-wrap max-[860px]:justify-between">
           <UserQuickSearch />
           <UserMenu
             user={user}
             onProfile={() => navigate("/profile")}
-            onRating={() => navigate("/leaderboard")}
+            onSettings={() => navigate("/settings")}
             onLogout={async () => {
               await logout();
               navigate("/login");

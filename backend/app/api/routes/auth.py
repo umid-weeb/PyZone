@@ -19,7 +19,7 @@ router = APIRouter(tags=["auth"])
 
 SECRET_KEY = os.getenv("ARENA_JWT_SECRET", os.getenv("JWT_SECRET", "dev-secret-change-me"))
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ARENA_JWT_EXPIRE_MINUTES", "60"))  # default 60 minutes
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ARENA_JWT_EXPIRE_MINUTES", str(60 * 24 * 7)))  # default 7 days
 security = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
 
@@ -33,6 +33,7 @@ def normalize_password(password: str) -> bytes:
 
 class RegisterRequest(BaseModel):
     username: str = Field(min_length=3, max_length=50)
+    email: str | None = Field(default=None, max_length=255)
     password: str = Field(min_length=4, max_length=128)
     country: str | None = None
 
@@ -49,7 +50,9 @@ class TokenResponse(BaseModel):
 
 
 class MeResponse(BaseModel):
+    id: int
     username: str
+    email: str | None = None
     country: str | None = None
     created_at: datetime
     avatar_url: str | None = None
@@ -74,9 +77,14 @@ def verify_password(password: str, hashed: str) -> bool:
         return False
 
 
-def create_access_token(subject: str) -> str:
+def create_access_token(user: User) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode = {"sub": subject, "exp": expire}
+    to_encode = {
+        "sub": str(user.id),
+        "user_id": user.id,
+        "username": user.username,
+        "exp": expire,
+    }
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
@@ -92,9 +100,16 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> TokenRe
         if existing:
             raise HTTPException(status_code=400, detail="Username already exists")
 
+        # Email must be unique when provided
+        if payload.email:
+            email_existing = db.query(User).filter(User.email == payload.email.strip().lower()).first()
+            if email_existing:
+                raise HTTPException(status_code=400, detail="Email already exists")
+
         # Create user with hashed password
         user = User(
             username=username,
+            email=payload.email.strip().lower() if payload.email else None,
             password_hash=get_password_hash(payload.password),
             country=payload.country,
         )
@@ -102,7 +117,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> TokenRe
         db.commit()
         db.refresh(user)
 
-        token = create_access_token(user.username)
+        token = create_access_token(user)
         return TokenResponse(token=token, access_token=token)
     except HTTPException:
         raise
@@ -123,11 +138,19 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> TokenRe
 @router.post("/login")
 def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
     try:
-        username = (payload.username or "").strip()
-        user = db.query(User).filter(User.username == username).first()
+        identifier = (payload.username or "").strip()
+        # Allow login by username or email
+        user = (
+            db.query(User)
+            .filter(
+                (User.username == identifier)
+                | (User.email == identifier.lower())
+            )
+            .first()
+        )
         if not user or not verify_password(payload.password, user.password_hash):
             raise HTTPException(status_code=401, detail="Invalid credentials")
-        token = create_access_token(user.username)
+        token = create_access_token(user)
         return TokenResponse(token=token, access_token=token)
     except HTTPException:
         raise
@@ -144,12 +167,18 @@ def me(credentials: HTTPAuthorizationCredentials | None = Depends(security), db:
         raise HTTPException(status_code=401, detail="Not authenticated")
     try:
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str | None = payload.get("sub")
+        user_id = payload.get("user_id")
+        username: str | None = payload.get("username") or payload.get("sub")
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
-    if not username:
+    if not (user_id or username):
         raise HTTPException(status_code=401, detail="Invalid token")
-    user = db.query(User).filter(User.username == username).first()
+
+    query = db.query(User)
+    if user_id is not None:
+        user = query.filter(User.id == int(user_id)).first()
+    else:
+        user = query.filter(User.username == username).first()
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
 
@@ -182,7 +211,9 @@ def me(credentials: HTTPAuthorizationCredentials | None = Depends(security), db:
             solved_hard += int(row.count or 0)
 
     return MeResponse(
+        id=user.id,
         username=user.username,
+        email=user.email,
         country=user.country,
         created_at=user.created_at,
         solved_total=solved_total,
@@ -202,10 +233,11 @@ def logout(credentials: HTTPAuthorizationCredentials | None = Depends(security))
         raise HTTPException(status_code=401, detail="Not authenticated")
     try:
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str | None = payload.get("sub")
+        user_id = payload.get("user_id")
+        username: str | None = payload.get("username") or payload.get("sub")
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
-    if not username:
+    if not (user_id or username):
         raise HTTPException(status_code=401, detail="Invalid token")
     return {"message": "Successfully logged out"}
 
@@ -230,12 +262,18 @@ def get_current_user(credentials: HTTPAuthorizationCredentials | None = Depends(
         raise HTTPException(status_code=401, detail="Not authenticated")
     try:
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str | None = payload.get("sub")
+        user_id = payload.get("user_id")
+        username: str | None = payload.get("username") or payload.get("sub")
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
-    if not username:
+    if not (user_id or username):
         raise HTTPException(status_code=401, detail="Invalid token")
-    user = db.query(User).filter(User.username == username).first()
+
+    query = db.query(User)
+    if user_id is not None:
+        user = query.filter(User.id == int(user_id)).first()
+    else:
+        user = query.filter(User.username == username).first()
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
     return user

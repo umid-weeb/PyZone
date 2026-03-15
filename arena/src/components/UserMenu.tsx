@@ -14,7 +14,7 @@ type ArenaUser = {
 type UserMenuProps = {
   user?: ArenaUser | null;
   onProfile: () => void;
-  onRating: () => void;
+  onSettings: () => void;
   onLogout: () => void | Promise<void>;
 };
 
@@ -134,7 +134,7 @@ function ActionItem({ label, icon, onClick, tone = "default" }: ActionItemProps)
   );
 }
 
-export default function UserMenu({ user, onProfile, onRating, onLogout }: UserMenuProps) {
+export default function UserMenu({ user, onProfile, onSettings, onLogout }: UserMenuProps) {
   const avatarSrc = useMemo(() => resolveAvatarSrc(user), [user]);
   const initials = buildInitials(user?.username);
 
@@ -179,12 +179,12 @@ export default function UserMenu({ user, onProfile, onRating, onLogout }: UserMe
             />
             <ActionItem
               icon={<TrophyIcon className="h-4 w-4" />}
-              label="Rating"
-              onClick={onRating}
+              label="Settings"
+              onClick={onSettings}
             />
             <ActionItem
               icon={<LogoutIcon className="h-4 w-4" />}
-              label="Logout"
+              label="Log out"
               onClick={onLogout}
               tone="danger"
             />
