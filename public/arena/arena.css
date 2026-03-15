@@ -1879,3 +1879,106 @@ textarea {
     display: inline-flex;
   }
 }
+
+/* ===== Mobile Navigation & Hamburger (iPhone / iPad) ===== */
+.mobile-hamburger {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 80;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--arena-border);
+  background: var(--arena-surface);
+  color: var(--arena-text);
+  border-radius: 14px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: var(--arena-shadow);
+}
+
+.mobile-hamburger span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: var(--arena-text);
+  border-radius: 999px;
+  box-shadow: 0 6px 0 var(--arena-text), 0 -6px 0 var(--arena-text);
+}
+
+.arena-mobile-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 8px));
+  background: radial-gradient(circle at 20% 0%, rgba(91, 141, 255, 0.1), transparent 40%),
+    radial-gradient(circle at 80% 0%, rgba(94, 231, 176, 0.12), transparent 40%),
+    rgba(6, 12, 24, 0.96);
+  display: none;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 75;
+  border-top: 1px solid var(--arena-border);
+  box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.35);
+}
+
+.arena-mobile-nav button {
+  flex: 1;
+  border: 1px solid var(--arena-border);
+  background: var(--arena-surface-2);
+  color: var(--arena-text);
+  border-radius: 14px;
+  padding: 10px 8px;
+  font-weight: 600;
+}
+
+.arena-mobile-nav button.is-active {
+  border-color: var(--arena-primary);
+  color: var(--arena-primary-strong);
+}
+
+@media (max-width: 900px) {
+  .arena-shell {
+    padding-bottom: calc(78px + env(safe-area-inset-bottom, 10px));
+  }
+  .arena-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: auto;
+  }
+  .arena-pane {
+    width: 100%;
+  }
+  .arena-pane-workbench {
+    order: 3;
+  }
+  .arena-pane-description {
+    order: 2;
+  }
+  .arena-pane-list {
+    order: 1;
+  }
+  .arena-mobile-nav {
+    display: flex;
+  }
+  .mobile-hamburger {
+    display: flex;
+  }
+  body.mobile-menu-open #arena-pane-list {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: var(--arena-bg);
+    overflow-y: auto;
+    padding: 18px;
+  }
+  body.mobile-menu-open .arena-mobile-nav {
+    opacity: 0.25;
+    pointer-events: none;
+  }
+}

@@ -60,6 +60,10 @@ function collectUi() {
   ui.leftDescriptionPane = document.getElementById("arena-pane-description");
   ui.showDescriptionPane = showDescriptionPane;
   ui.showListPane = showListPane;
+  ui.mobileHamburger = document.getElementById("mobile-hamburger");
+  ui.mobileNavProblems = document.getElementById("mobile-nav-problems");
+  ui.mobileNavEditor = document.getElementById("mobile-nav-editor");
+  ui.mobileNavProfile = document.getElementById("mobile-nav-profile");
 }
 
 function bindEvents() {
@@ -137,6 +141,31 @@ function bindEvents() {
       clearTimeout(searchTimer);
       const currentVersion = ++navSearchVersion;
       searchTimer = setTimeout(() => runUserSearch(q, currentVersion), 300);
+    });
+  }
+
+  if (ui.mobileHamburger) {
+    ui.mobileHamburger.addEventListener("click", () => {
+      document.body.classList.toggle("mobile-menu-open");
+    });
+  }
+  if (ui.mobileNavProblems) {
+    ui.mobileNavProblems.addEventListener("click", () => {
+      document.body.classList.remove("mobile-menu-open");
+      ui.leftListPane?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+  if (ui.mobileNavEditor) {
+    ui.mobileNavEditor.addEventListener("click", () => {
+      document.body.classList.remove("mobile-menu-open");
+      const workbench = document.getElementById("arena-pane-workbench") || ui.leftDescriptionPane;
+      workbench?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+  if (ui.mobileNavProfile) {
+    ui.mobileNavProfile.addEventListener("click", () => {
+      document.body.classList.remove("mobile-menu-open");
+      toggleUserMenu();
     });
   }
 }
