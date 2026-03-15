@@ -64,6 +64,9 @@ function collectUi() {
   ui.mobileNavProblems = document.getElementById("mobile-nav-problems");
   ui.mobileNavEditor = document.getElementById("mobile-nav-editor");
   ui.mobileNavProfile = document.getElementById("mobile-nav-profile");
+  ui.mobileDrawer = document.getElementById("mobile-drawer");
+  ui.mobileDrawerOverlay = document.getElementById("mobile-drawer-overlay");
+  ui.mobileDrawerClose = document.getElementById("mobile-drawer-close");
 }
 
 function bindEvents() {
@@ -145,29 +148,38 @@ function bindEvents() {
   }
 
   if (ui.mobileHamburger) {
-    ui.mobileHamburger.addEventListener("click", () => {
-      document.body.classList.toggle("mobile-menu-open");
-    });
+    ui.mobileHamburger.addEventListener("click", toggleMobileMenu);
   }
   if (ui.mobileNavProblems) {
     ui.mobileNavProblems.addEventListener("click", () => {
-      document.body.classList.remove("mobile-menu-open");
+      closeMobileMenu();
       ui.leftListPane?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
   if (ui.mobileNavEditor) {
     ui.mobileNavEditor.addEventListener("click", () => {
-      document.body.classList.remove("mobile-menu-open");
+      closeMobileMenu();
       const workbench = document.getElementById("arena-pane-workbench") || ui.leftDescriptionPane;
       workbench?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
   if (ui.mobileNavProfile) {
     ui.mobileNavProfile.addEventListener("click", () => {
-      document.body.classList.remove("mobile-menu-open");
+      closeMobileMenu();
       toggleUserMenu();
     });
   }
+  if (ui.mobileDrawerClose) {
+    ui.mobileDrawerClose.addEventListener("click", closeMobileMenu);
+  }
+  if (ui.mobileDrawerOverlay) {
+    ui.mobileDrawerOverlay.addEventListener("click", closeMobileMenu);
+  }
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && document.body.classList.contains("mobile-menu-open")) {
+      closeMobileMenu();
+    }
+  });
 }
 
 function bindShortcuts() {
@@ -244,6 +256,14 @@ function toggleUserMenu() {
     renderGuestMenu();
   }
   ui.userMenu.classList.toggle("is-open");
+}
+
+function toggleMobileMenu() {
+  document.body.classList.toggle("mobile-menu-open");
+}
+
+function closeMobileMenu() {
+  document.body.classList.remove("mobile-menu-open");
 }
 
 async function runUserSearch(query, version) {
