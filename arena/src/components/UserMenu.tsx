@@ -1,5 +1,4 @@
-import { Fragment, useMemo } from "react";
-import type { ReactNode } from "react";
+import { Fragment, useMemo, type ReactNode } from "react";
 import { Menu, MenuButton, MenuItem, MenuItems, Transition } from "@headlessui/react";
 import { API_BASE_URL } from "../lib/apiClient.js";
 
@@ -145,7 +144,7 @@ export default function UserMenu({ user, onProfile, onSettings, onLogout, onLogi
     <Menu as="div" className="relative">
       <MenuButton
         aria-label="User menu"
-        className="group flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl border border-arena-border bg-white/5 text-arena-primaryStrong shadow-[0_10px_24px_rgba(0,0,0,0.18)] transition hover:border-arena-borderStrong hover:bg-white/10 focus:outline-none focus-visible:border-arena-borderStrong focus-visible:ring-4 focus-visible:ring-[rgba(108,146,255,0.14)]"
+        className="group flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-arena-border bg-white/5 text-arena-primaryStrong shadow-[0_10px_24px_rgba(0,0,0,0.18)] transition hover:border-arena-borderStrong hover:bg-white/10 focus:outline-none focus-visible:border-arena-borderStrong focus-visible:ring-4 focus-visible:ring-[rgba(108,146,255,0.14)]"
         type="button"
       >
         {isAuthenticated && avatarSrc ? (

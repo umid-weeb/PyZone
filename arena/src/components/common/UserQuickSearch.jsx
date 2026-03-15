@@ -51,7 +51,7 @@ export default function UserQuickSearch() {
         onChange={(event) => setQuery(event.target.value)}
       />
       {query ? (
-        <div className="absolute left-0 right-0 top-[calc(100%+10px)] z-20 grid gap-2 rounded-[18px] border border-arena-border bg-[rgba(10,18,34,0.97)] p-2.5 shadow-arena">
+        <div className="absolute left-0 right-0 top-[calc(100%+10px)] z-20 w-[320px] max-h-[220px] overflow-y-auto rounded-[12px] border border-arena-border bg-[rgba(15,23,42,0.98)] p-2 shadow-[0_10px_25px_rgba(0,0,0,0.35)]">
           {status === "loading" ? <div className="px-2 py-1.5 text-sm text-arena-muted">Searching...</div> : null}
           {status === "error" ? <div className="px-2 py-1.5 text-sm text-arena-muted">Search unavailable</div> : null}
           {status === "ready" && results.length === 0 ? (
@@ -60,7 +60,7 @@ export default function UserQuickSearch() {
           {results.map((user) => (
             <button
               key={user.id}
-              className="flex w-full items-center gap-3 rounded-[14px] bg-white/5 px-3 py-2.5 text-left text-arena-text transition hover:bg-[rgba(108,146,255,0.12)]"
+              className="flex w-full items-center gap-10 rounded-[8px] px-12 py-0 text-left text-arena-text transition hover:bg-[rgba(255,255,255,0.05)]"
               type="button"
               onClick={() => {
                 setQuery("");
@@ -68,7 +68,7 @@ export default function UserQuickSearch() {
                 navigate(`/profile?username=${encodeURIComponent(user.username)}`);
               }}
             >
-              <span className="grid h-[34px] w-[34px] place-items-center rounded-full border border-arena-border bg-[rgba(108,146,255,0.08)] text-sm font-semibold text-arena-primaryStrong">
+              <span className="grid h-[36px] w-[36px] place-items-center rounded-full border border-arena-border bg-[rgba(108,146,255,0.08)] text-sm font-semibold text-arena-primaryStrong">
                 {user.username.slice(0, 1).toUpperCase()}
               </span>
               <span>{user.username}</span>
