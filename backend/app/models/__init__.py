@@ -12,6 +12,7 @@ from app.models.schemas import (
 from app.models.user import User
 from app.models.problem import Problem, TestCase
 from app.models.rating import UserRating, RatingHistory
+from app.models.contest import Contest, ContestProblem, ContestEntry, ContestSubmission
 
 __all__ = [
     "ProblemSummary",
@@ -26,4 +27,8 @@ __all__ = [
     "TestCase",
     "UserRating",
     "RatingHistory",
+    "Contest",
+    "ContestProblem",
+    "ContestEntry",
+    "ContestSubmission",
 ]

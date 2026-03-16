@@ -12,12 +12,20 @@ import ProfileDashboardPage from "./pages/profile/ProfileDashboardPage.tsx";
 import UserSubmissionsPage from "./pages/profile/UserSubmissionsPage.tsx";
 import ProfileSettingsPage from "./pages/profile/ProfileSettingsPage.tsx";
 import ProfileIndexRedirect from "./pages/profile/ProfileIndexRedirect.tsx";
+import ProblemPage from "./pages/ProblemPage.tsx";
+import ContestsPage from "./pages/contest/ContestsPage.tsx";
+import ContestPage from "./pages/contest/ContestPage.tsx";
+import ContestLeaderboardPage from "./pages/contest/ContestLeaderboardPage.tsx";
 
 export default function App() {
   return (
     <AppFrame>
       <Routes>
         <Route path="/zone" element={<ArenaPage />} />
+        <Route path="/problems/:slug" element={<ProblemPage />} />
+        <Route path="/contest" element={<ContestsPage />} />
+        <Route path="/contest/:id" element={<ContestPage />} />
+        <Route path="/contest/:id/leaderboard" element={<ContestLeaderboardPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 

@@ -148,8 +148,8 @@ function ActionItem({ label, icon, onClick, tone = "default" }: ActionItemProps)
       <button
         className={cx(
           "group flex h-10 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-medium transition",
-          "text-arena-text data-[focus]:bg-white/5 data-[focus]:outline-none",
-          tone === "danger" && "text-[#ff6b81] data-[focus]:bg-[rgba(255,123,143,0.1)]"
+          "text-gray-200 outline-none hover:bg-gray-800 hover:text-white data-[focus]:bg-gray-800 data-[focus]:text-white",
+          tone === "danger" && "text-[#ff6b81] hover:text-white"
         )}
         type="button"
         onClick={() => {
@@ -158,10 +158,8 @@ function ActionItem({ label, icon, onClick, tone = "default" }: ActionItemProps)
       >
         <span
           className={cx(
-            "flex h-8 w-8 items-center justify-center rounded-md border border-arena-border bg-white/5 text-arena-muted transition",
-            "group-data-[focus]:border-arena-borderStrong group-data-[focus]:text-arena-text",
-            tone === "danger" &&
-              "text-[#ff6b81] group-data-[focus]:border-[rgba(255,123,143,0.2)] group-data-[focus]:text-[#ffd7de]"
+            "flex h-8 w-8 items-center justify-center rounded-md border border-gray-700 bg-gray-900 text-gray-400 transition",
+            "group-hover:text-gray-200 group-data-[focus]:text-gray-200"
           )}
         >
           {icon}
@@ -172,7 +170,15 @@ function ActionItem({ label, icon, onClick, tone = "default" }: ActionItemProps)
   );
 }
 
-export default function UserMenu({ user, onProfile, onSettings, onLogout, onLogin, onRegister }: UserMenuProps) {
+export default function UserMenu({
+  user,
+  onProfile,
+  onSubmissions,
+  onSettings,
+  onLogout,
+  onLogin,
+  onRegister,
+}: UserMenuProps) {
   const avatarSrc = useMemo(() => resolveAvatarSrc(user), [user]);
   const initials = buildInitials(user?.username);
   const isAuthenticated = Boolean(user);
@@ -207,9 +213,9 @@ export default function UserMenu({ user, onProfile, onSettings, onLogout, onLogi
         leaveFrom="translate-y-0 scale-100 opacity-100"
         leaveTo="translate-y-1 scale-95 opacity-0"
       >
-        <MenuItems className="absolute right-0 z-[9999] mt-3 w-60 origin-top-right rounded-xl bg-[#0b1220] p-2 shadow-2xl ring-1 ring-white/5 focus:outline-none">
+        <MenuItems className="absolute right-0 z-[9999] mt-3 w-60 rounded-xl border border-gray-700 bg-gray-900 text-gray-200 shadow-xl focus:outline-none">
           {isAuthenticated ? (
-            <div className="space-y-1">
+            <div className="space-y-1 p-2">
               <ActionItem
                 icon={<ProfileIcon className="h-4 w-4" />}
                 label="Profile"
@@ -233,7 +239,7 @@ export default function UserMenu({ user, onProfile, onSettings, onLogout, onLogi
               />
             </div>
           ) : (
-            <div className="space-y-1">
+            <div className="space-y-1 p-2">
               <ActionItem
                 icon={<ProfileIcon className="h-4 w-4" />}
                 label="Login"

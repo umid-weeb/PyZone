@@ -186,7 +186,7 @@ export default function ProfileDashboardPage() {
                   </div>
                 </div>
                 <div className="min-w-[260px]">
-                  <RatingBadge rating={profile.rating ?? 1200} globalRank={profile.global_rank ?? null} />
+                  <RatingBadge rating={profile.rating ?? 800} globalRank={profile.global_rank ?? null} />
                 </div>
               </div>
               {profile.bio ? <p className="mt-5 max-w-3xl text-sm leading-relaxed text-arena-text/90">{profile.bio}</p> : null}

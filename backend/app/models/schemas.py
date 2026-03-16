@@ -53,6 +53,7 @@ class SubmissionRequest(BaseModel):
     problem_id: str
     code: str
     language: Literal["python", "javascript", "cpp"] = "python"
+    contest_id: str | None = None
 
 
 class SubmissionCreated(BaseModel):

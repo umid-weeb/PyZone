@@ -197,10 +197,19 @@ function delay(ms) {
 }
 
 function buildSubmissionPayload(problemSlug, code, language) {
+  const contestId = (() => {
+    try {
+      const params = new URLSearchParams(window.location.search || "");
+      return params.get("contest") || "";
+    } catch {
+      return "";
+    }
+  })();
   return {
     code,
     language,
     problemSlug,
     problem_id: problemSlug,
+    contest_id: contestId || undefined,
   };
 }

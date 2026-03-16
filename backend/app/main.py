@@ -12,6 +12,7 @@ from app.api.routes.auth import router as auth_router
 from app.api.routes.users import router as user_router, account_router
 from app.api.routes.problems import router as problem_router
 from app.api.routes.submissions import router as submission_router
+from app.api.routes.contests import router as contest_router
 from app.core.config import get_settings
 from app.repositories.submissions import SubmissionRepository
 from app.database import Base, engine
@@ -50,6 +51,7 @@ app.add_middleware(
 
 app.include_router(problem_router, prefix=settings.api_prefix)
 app.include_router(submission_router, prefix=settings.api_prefix)
+app.include_router(contest_router, prefix=settings.api_prefix)
 app.include_router(health_router)
 app.include_router(auth_router, prefix=settings.api_prefix)
 app.include_router(user_router, prefix=settings.api_prefix)

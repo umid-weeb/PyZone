@@ -16,6 +16,7 @@ export default function Leaderboard({ entries = [], error }) {
           <tr>
             <th>#</th>
             <th>User</th>
+            <th>Rating</th>
             <th>Solved</th>
             <th>Submissions</th>
             <th>Fastest</th>
@@ -26,6 +27,7 @@ export default function Leaderboard({ entries = [], error }) {
             <tr key={`${entry.username}-${index}`}>
               <td>{index + 1}</td>
               <td>{entry.username}</td>
+              <td>{entry.rating ?? "--"}</td>
               <td>{entry.solved || 0}</td>
               <td>{entry.submissions || 0}</td>
               <td>{entry.fastest_ms ? `${entry.fastest_ms} ms` : "--"}</td>

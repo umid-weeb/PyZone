@@ -142,6 +142,54 @@ create index if not exists idx_rating_history_user_created on public.rating_hist
 create index if not exists idx_ratings_rating on public.ratings (rating desc);
 
 -- =========================
+-- Contests
+-- =========================
+
+create table if not exists public.contests (
+  id text primary key,
+  title text not null,
+  description text,
+  starts_at timestamptz,
+  ends_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.contest_problems (
+  id bigserial primary key,
+  contest_id text not null references public.contests(id) on delete cascade,
+  problem_id text not null references public.problems(id) on delete restrict,
+  sort_order int not null default 0,
+  unique(contest_id, problem_id)
+);
+
+create index if not exists idx_contest_problems_contest on public.contest_problems (contest_id, sort_order);
+
+create table if not exists public.contest_entries (
+  id bigserial primary key,
+  contest_id text not null references public.contests(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  joined_at timestamptz not null default now(),
+  unique(contest_id, user_id)
+);
+
+create index if not exists idx_contest_entries_contest on public.contest_entries (contest_id, joined_at);
+
+create table if not exists public.contest_submissions (
+  id bigserial primary key,
+  contest_id text not null references public.contests(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  problem_id text not null references public.problems(id) on delete restrict,
+  submission_id text,
+  language text not null,
+  verdict text,
+  runtime_ms int,
+  memory_kb int,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_contest_submissions_lookup on public.contest_submissions (contest_id, user_id, created_at desc);
+
+-- =========================
 -- RLS
 -- =========================
 
@@ -151,6 +199,10 @@ alter table public.user_stats enable row level security;
 alter table public.problem_stats enable row level security;
 alter table public.ratings enable row level security;
 alter table public.rating_history enable row level security;
+alter table public.contests enable row level security;
+alter table public.contest_problems enable row level security;
+alter table public.contest_entries enable row level security;
+alter table public.contest_submissions enable row level security;
 
 -- Profiles: public read, self write
 drop policy if exists "profiles_public_read" on public.profiles;
@@ -191,6 +243,31 @@ for select using (auth.uid() = user_id);
 drop policy if exists "problem_stats_public_read" on public.problem_stats;
 create policy "problem_stats_public_read" on public.problem_stats
 for select using (true);
+
+-- Contests: public read (platform content), entries/submissions owner-only
+drop policy if exists "contests_public_read" on public.contests;
+create policy "contests_public_read" on public.contests
+for select using (true);
+
+drop policy if exists "contest_problems_public_read" on public.contest_problems;
+create policy "contest_problems_public_read" on public.contest_problems
+for select using (true);
+
+drop policy if exists "contest_entries_owner_read" on public.contest_entries;
+create policy "contest_entries_owner_read" on public.contest_entries
+for select using (auth.uid() = user_id);
+
+drop policy if exists "contest_entries_owner_insert" on public.contest_entries;
+create policy "contest_entries_owner_insert" on public.contest_entries
+for insert with check (auth.uid() = user_id);
+
+drop policy if exists "contest_submissions_owner_read" on public.contest_submissions;
+create policy "contest_submissions_owner_read" on public.contest_submissions
+for select using (auth.uid() = user_id);
+
+drop policy if exists "contest_submissions_owner_insert" on public.contest_submissions;
+create policy "contest_submissions_owner_insert" on public.contest_submissions
+for insert with check (auth.uid() = user_id);
 
 -- =========================
 -- Storage (avatars) notes:

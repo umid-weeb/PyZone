@@ -24,6 +24,7 @@ from app.database import get_db
 from app.database import SessionLocal
 from app.models.user import User
 from app.models.problem import Problem
+from app.models.rating import UserRating
 from app.models.submission_stats import UserSubmission
 from app.api.routes.auth import (
     ALGORITHM,
@@ -255,7 +256,7 @@ def user_submissions(current_user: User = Depends(get_current_user)) -> list:
 @router.get("/leaderboard")
 def leaderboard(db: Session = Depends(get_db)) -> list:
     """
-    Simple global leaderboard sorted by number of distinct solved problems.
+    Global leaderboard sorted by rating, then solved.
     """
     subq = (
         db.query(
@@ -272,12 +273,14 @@ def leaderboard(db: Session = Depends(get_db)) -> list:
     rows = (
         db.query(
             User.username,
+            func.coalesce(UserRating.rating, 800).label("rating"),
             subq.c.solved,
             subq.c.submissions,
             subq.c.fastest_ms,
         )
         .join(subq, subq.c.user_id == User.id)
-        .order_by(subq.c.solved.desc(), User.username.asc())
+        .outerjoin(UserRating, UserRating.user_id == User.id)
+        .order_by(func.coalesce(UserRating.rating, 800).desc(), subq.c.solved.desc(), User.username.asc())
         .limit(100)
         .all()
     )
@@ -285,6 +288,7 @@ def leaderboard(db: Session = Depends(get_db)) -> list:
     return [
         {
             "username": row.username,
+            "rating": int(row.rating or 800),
             "solved": int(row.solved or 0),
             "submissions": int(row.submissions or 0),
             "fastest_ms": int(row.fastest_ms) if row.fastest_ms is not None else None,
