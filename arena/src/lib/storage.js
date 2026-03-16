@@ -1,4 +1,5 @@
 const TOKEN_KEYS = ["userToken", "auth_token", "token", "arena_jwt", "access_token"];
+const USERNAME_KEY = "arena_username";
 const LANGUAGE_KEY = "arena_language";
 const LAST_PROBLEM_KEY = "arena_last_problem";
 const PENDING_ACTION_KEY = "arena_pending_action";
@@ -69,4 +70,16 @@ export function readPendingSubmission() {
 export function clearPendingSubmission() {
   localStorage.removeItem(PENDING_ACTION_KEY);
   localStorage.removeItem(PENDING_PROBLEM_KEY);
+}
+
+export function readStoredUsername() {
+  return localStorage.getItem(USERNAME_KEY) || "";
+}
+
+export function writeStoredUsername(username) {
+  localStorage.setItem(USERNAME_KEY, username);
+}
+
+export function clearStoredUsername() {
+  localStorage.removeItem(USERNAME_KEY);
 }

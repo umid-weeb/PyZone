@@ -3,6 +3,8 @@ import { authApi } from "../lib/apiClient.js";
 import {
   clearStoredToken,
   readStoredToken,
+  writeStoredUsername,
+  clearStoredUsername,
 } from "../lib/storage.js";
 
 const AuthContext = createContext(null);
@@ -56,6 +58,7 @@ export function AuthProvider({ children }) {
         setToken(payload.token);
         const me = await authApi.me(payload.token);
         setUser(me);
+        writeStoredUsername(username);
         return me;
       },
       async register(data) {
@@ -63,6 +66,7 @@ export function AuthProvider({ children }) {
         setToken(payload.token);
         const me = await authApi.me(payload.token);
         setUser(me);
+        writeStoredUsername(data.username);
         return me;
       },
       async refreshUser() {

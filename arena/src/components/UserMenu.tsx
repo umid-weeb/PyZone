@@ -1,6 +1,7 @@
 import { Fragment, useMemo, type ReactNode } from "react";
 import { Menu, MenuButton, MenuItem, MenuItems, Transition } from "@headlessui/react";
 import { API_BASE_URL } from "../lib/apiClient.js";
+import { readStoredUsername } from "../lib/storage.js";
 
 type ArenaUser = {
   username?: string | null;
@@ -139,6 +140,7 @@ export default function UserMenu({ user, onProfile, onSettings, onLogout, onLogi
   const avatarSrc = useMemo(() => resolveAvatarSrc(user), [user]);
   const initials = buildInitials(user?.username);
   const isAuthenticated = Boolean(user);
+  const storedUsername = readStoredUsername();
 
   return (
     <Menu as="div" className="relative">

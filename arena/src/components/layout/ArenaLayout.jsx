@@ -1,6 +1,7 @@
 import { Group as ResizablePanelGroup, Panel } from "react-resizable-panels";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { readStoredUsername } from "../../lib/storage.js";
 import UserMenu from "../UserMenu.tsx";
 import UserQuickSearch from "../common/UserQuickSearch.jsx";
 import ResizeHandle from "./ResizeHandle.jsx";
@@ -23,13 +24,14 @@ export default function ArenaLayout({
 }) {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
+  const storedUsername = readStoredUsername();
 
   return (
     <div className="mx-auto flex h-screen w-[min(1500px,calc(100vw-20px))] max-w-full flex-col overflow-hidden py-[10px] max-[860px]:w-[min(100vw-12px,100%)]">
       <div className="mb-2 flex h-[72px] shrink-0 items-center justify-between gap-3 px-1 max-[860px]:h-auto max-[860px]:flex-col max-[860px]:items-stretch">
         <div className="flex items-center gap-4">
           <button
-            className="group inline-flex items-center gap-2 rounded-full border border-arena-border/80 bg-[rgba(8,16,30,0.62)] px-4 py-2.5 text-sm font-medium text
+            className="group inline-flex items-center gap-2 rounded-full border border-arena-border/80 bg-[rgba(8,16,30,0.62)] px-4 py-2.5 text-sm font-medium text-arena-text"
             type="button"
             onClick={() => navigate("/")}
           >
@@ -58,7 +60,7 @@ export default function ArenaLayout({
           <UserQuickSearch />
           <UserMenu
             user={user}
-            onProfile={() => navigate("/profile")}
+            onProfile={() => navigate(`/profile/${storedUsername}`)}
             onSettings={() => navigate("/settings")}
             onLogin={() => navigate("/login")}
             onRegister={() => navigate("/register")}

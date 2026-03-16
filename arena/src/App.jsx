@@ -25,6 +25,14 @@ export default function App() {
           }
         />
         <Route
+          path="/profile/:username"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/submissions"
           element={
             <ProtectedRoute>
