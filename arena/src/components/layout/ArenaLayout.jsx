@@ -27,7 +27,7 @@ export default function ArenaLayout({
   const storedUsername = readStoredUsername();
 
   return (
-    <div className="mx-auto flex h-screen w-[min(1500px,calc(100vw-20px))] max-w-full flex-col overflow-hidden py-[10px] max-[860px]:w-[min(100vw-12px,100%)]">
+    <div className="mx-auto flex h-screen w-[min(1500px,calc(100vw-20px))] max-w-full flex-col py-[10px] max-[860px]:w-[min(100vw-12px,100%)]">
       <div className="mb-2 flex h-[72px] shrink-0 items-center justify-between gap-3 px-1 max-[860px]:h-auto max-[860px]:flex-col max-[860px]:items-stretch">
         <div className="flex items-center gap-4">
           <button
