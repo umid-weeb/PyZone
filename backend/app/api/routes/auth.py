@@ -54,6 +54,7 @@ class MeResponse(BaseModel):
     id: int
     username: str
     email: str | None = None
+    display_name: str | None = None
     country: str | None = None
     created_at: datetime
     avatar_url: str | None = None
@@ -68,13 +69,17 @@ class MeResponse(BaseModel):
 
 class PublicProfileResponse(BaseModel):
     username: str
+    display_name: str | None = None
     country: str | None = None
     created_at: datetime
     avatar_url: str | None = None
+    bio: str | None = None
     solved_total: int = 0
     solved_easy: int = 0
     solved_medium: int = 0
     solved_hard: int = 0
+    rating: int = 1200
+    global_rank: int | None = None
 
 
 def get_password_hash(password: str) -> str:
@@ -233,13 +238,18 @@ def me(credentials: HTTPAuthorizationCredentials | None = Depends(security), db:
         raise HTTPException(status_code=401, detail="User not found")
 
     stats = calculate_user_stats(db, user.id)
+    from app.services.rating_service import rating_service
+    rating = rating_service.snapshot(db, user.id)
 
     return MeResponse(
         id=user.id,
         username=user.username,
         email=user.email,
+        display_name=getattr(user, "display_name", None),
         country=user.country,
         created_at=user.created_at,
+        avatar_url=getattr(user, "avatar_url", None),
+        bio=getattr(user, "bio", None),
         solved_total=stats["solved_total"],
         solved_easy=stats["solved_easy"],
         solved_medium=stats["solved_medium"],
@@ -310,10 +320,17 @@ def get_public_user_profile(username: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
 
     stats = calculate_user_stats(db, user.id)
+    from app.services.rating_service import rating_service
+    rating = rating_service.snapshot(db, user.id)
     return PublicProfileResponse(
         username=user.username,
+        display_name=getattr(user, "display_name", None),
         country=user.country,
         created_at=user.created_at,
+        avatar_url=getattr(user, "avatar_url", None),
+        bio=getattr(user, "bio", None),
+        rating=rating.rating,
+        global_rank=rating.global_rank,
         **stats
     )
 

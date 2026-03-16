@@ -15,6 +15,7 @@ class UserSubmission(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
     problem_id = Column(String(36), index=True, nullable=False)
     submission_id = Column(String(64), index=True, nullable=False)
+    language = Column(String(64), nullable=True)
     verdict = Column(String(64), nullable=True)
     runtime_ms = Column(Integer, nullable=True)
     memory_kb = Column(Integer, nullable=True)

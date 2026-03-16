@@ -15,3 +15,5 @@ python-jose==3.3.0
 SQLAlchemy==2.0.36
 psycopg2-binary==2.9.10
 python-dotenv==1.0.1
+requests==2.32.3
+supabase==2.15.0

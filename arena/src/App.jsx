@@ -8,6 +8,10 @@ import ProfilePage from "./pages/ProfilePage.jsx";
 import SubmissionsPage from "./pages/SubmissionsPage.jsx";
 import LeaderboardPage from "./pages/LeaderboardPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
+import ProfileDashboardPage from "./pages/profile/ProfileDashboardPage.tsx";
+import UserSubmissionsPage from "./pages/profile/UserSubmissionsPage.tsx";
+import ProfileSettingsPage from "./pages/profile/ProfileSettingsPage.tsx";
+import ProfileIndexRedirect from "./pages/profile/ProfileIndexRedirect.tsx";
 
 export default function App() {
   return (
@@ -16,8 +20,43 @@ export default function App() {
         <Route path="/zone" element={<ArenaPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+
+        <Route
+          path="/profile/settings"
+          element={
+            <ProtectedRoute>
+              <ProfileSettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile/:username/submissions"
+          element={
+            <ProtectedRoute>
+              <UserSubmissionsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile/:username"
+          element={
+            <ProtectedRoute>
+              <ProfileDashboardPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfileIndexRedirect />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Backwards-compatible legacy routes */}
+        <Route
+          path="/profile-legacy"
           element={
             <ProtectedRoute>
               <ProfilePage />
@@ -25,7 +64,7 @@ export default function App() {
           }
         />
         <Route
-          path="/profile/:username"
+          path="/profile-legacy/:username"
           element={
             <ProtectedRoute>
               <ProfilePage />
@@ -34,6 +73,14 @@ export default function App() {
         />
         <Route
           path="/submissions"
+          element={
+            <ProtectedRoute>
+              <ProfileIndexRedirect fallbackTo="/submissions-legacy" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/submissions-legacy"
           element={
             <ProtectedRoute>
               <SubmissionsPage />
@@ -50,6 +97,14 @@ export default function App() {
         />
         <Route
           path="/settings"
+          element={
+            <ProtectedRoute>
+              <Navigate to="/profile/settings" replace />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings-legacy"
           element={
             <ProtectedRoute>
               <SettingsPage />

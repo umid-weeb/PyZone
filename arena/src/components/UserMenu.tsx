@@ -14,6 +14,7 @@ type ArenaUser = {
 type UserMenuProps = {
   user?: ArenaUser | null;
   onProfile: () => void;
+  onSubmissions: () => void;
   onSettings: () => void;
   onLogout: () => void | Promise<void>;
   onLogin: () => void;
@@ -64,6 +65,41 @@ function TrophyIcon({ className = "" }: IconProps) {
     <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
       <path
         d="M8.25 6.75h7.5v1.5a3.75 3.75 0 0 1-7.5 0v-1.5Zm0 0H5.625a.375.375 0 0 0-.375.375v.75a3.75 3.75 0 0 0 3 3.674m0-4.799h7.5m0 0h2.625a.375.375 0 0 1 .375.375v.75a3.75 3.75 0 0 1-3 3.674m-7.5 0a6.76 6.76 0 0 0 3.75 1.201 6.76 6.76 0 0 0 3.75-1.201m-7.5 0v2.326c0 .497-.196.974-.545 1.326L9 16.5h6l-1.705-1.705a1.875 1.875 0 0 1-.545-1.326v-2.326M9 16.5v.75A1.5 1.5 0 0 0 10.5 18.75h3A1.5 1.5 0 0 0 15 17.25v-.75"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
+function ListIcon({ className = "" }: IconProps) {
+  return (
+    <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
+      <path
+        d="M8.25 6.75h12m-12 5.25h12m-12 5.25h12M3.75 6.75h.75v.75h-.75v-.75Zm0 5.25h.75v.75h-.75V12Zm0 5.25h.75v.75h-.75V17.25Z"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
+function SettingsIcon({ className = "" }: IconProps) {
+  return (
+    <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
+      <path
+        d="M10.5 6h3m-3 12h3M6 10.5v3m12-3v3M8.25 6.75l-1.5-1.5m10.5 0-1.5 1.5M8.25 17.25l-1.5 1.5m10.5 0-1.5-1.5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.5"
+      />
+      <path
+        d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
         stroke="currentColor"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -171,7 +207,7 @@ export default function UserMenu({ user, onProfile, onSettings, onLogout, onLogi
         leaveFrom="translate-y-0 scale-100 opacity-100"
         leaveTo="translate-y-1 scale-95 opacity-0"
       >
-        <MenuItems className="absolute right-0 z-[9999] mt-3 w-60 origin-top-right rounded-[24px] border border-arena-border bg-[#0b1220] p-2 shadow-2xl focus:outline-none">
+        <MenuItems className="absolute right-0 z-[9999] mt-3 w-60 origin-top-right rounded-xl bg-[#0b1220] p-2 shadow-2xl ring-1 ring-white/5 focus:outline-none">
           {isAuthenticated ? (
             <div className="space-y-1">
               <ActionItem
@@ -180,7 +216,12 @@ export default function UserMenu({ user, onProfile, onSettings, onLogout, onLogi
                 onClick={onProfile}
               />
               <ActionItem
-                icon={<TrophyIcon className="h-4 w-4" />}
+                icon={<ListIcon className="h-4 w-4" />}
+                label="Submissions"
+                onClick={onSubmissions}
+              />
+              <ActionItem
+                icon={<SettingsIcon className="h-4 w-4" />}
                 label="Settings"
                 onClick={onSettings}
               />

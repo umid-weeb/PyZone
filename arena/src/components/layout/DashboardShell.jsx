@@ -7,9 +7,8 @@ import styles from "./DashboardShell.module.css";
 const navItems = [
   { to: "/zone", label: "Arena" },
   { to: "/profile", label: "Profile" },
-  { to: "/submissions", label: "Submissions" },
   { to: "/leaderboard", label: "Leaderboard" },
-  { to: "/settings", label: "Settings" },
+  { to: "/profile/settings", label: "Settings" },
 ];
 
 export default function DashboardShell({ eyebrow, title, subtitle, actions, children }) {
@@ -35,7 +34,10 @@ export default function DashboardShell({ eyebrow, title, subtitle, actions, chil
             <UserMenu
               user={user}
               onProfile={() => navigate("/profile")}
-              onSettings={() => navigate("/settings")}
+              onSubmissions={() =>
+                user?.username ? navigate(`/profile/${encodeURIComponent(user.username)}/submissions`) : navigate("/submissions")
+              }
+              onSettings={() => navigate("/profile/settings")}
               onLogin={() => navigate("/login")}
               onRegister={() => navigate("/register")}
               onLogout={async () => {

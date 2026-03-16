@@ -12,6 +12,7 @@ from app.models.submission_stats import UserSubmission
 from app.repositories.submissions import SubmissionRepository
 from app.services.problem_service import ProblemService, get_problem_service
 from app.database import SessionLocal
+from app.services.rating_service import rating_service
 
 
 class SubmissionService:
@@ -42,6 +43,7 @@ class SubmissionService:
                     user_id=user_id,
                     problem_id=payload.problem_id,
                     submission_id=submission_id,
+                    language=payload.language,
                     verdict=None,
                     runtime_ms=None,
                     memory_kb=None,
@@ -110,6 +112,13 @@ class SubmissionService:
                         record.verdict = result.get("verdict")
                         record.runtime_ms = result.get("runtime_ms")
                         record.memory_kb = result.get("memory_kb")
+                        rating_service.on_submission_result(
+                            db,
+                            user_id=record.user_id,
+                            problem_id=record.problem_id,
+                            submission_id=record.submission_id,
+                            verdict=record.verdict,
+                        )
                         db.commit()
         except Exception as error:
             self.repository.mark_failed(submission_id, str(error))

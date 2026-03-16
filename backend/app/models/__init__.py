@@ -11,6 +11,7 @@ from app.models.schemas import (
 )
 from app.models.user import User
 from app.models.problem import Problem, TestCase
+from app.models.rating import UserRating, RatingHistory
 
 __all__ = [
     "ProblemSummary",
@@ -23,4 +24,6 @@ __all__ = [
     "User",
     "Problem",
     "TestCase",
+    "UserRating",
+    "RatingHistory",
 ]

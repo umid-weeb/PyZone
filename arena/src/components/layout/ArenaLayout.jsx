@@ -61,7 +61,10 @@ export default function ArenaLayout({
           <UserMenu
             user={user}
             onProfile={() => navigate(`/profile/${storedUsername}`)}
-            onSettings={() => navigate("/settings")}
+            onSubmissions={() =>
+              storedUsername ? navigate(`/profile/${encodeURIComponent(storedUsername)}/submissions`) : navigate("/submissions")
+            }
+            onSettings={() => navigate("/profile/settings")}
             onLogin={() => navigate("/login")}
             onRegister={() => navigate("/register")}
             onLogout={async () => {
