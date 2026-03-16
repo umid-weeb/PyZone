@@ -71,3 +71,8 @@
     font-family: "IBM Plex Mono", monospace !important;
   }
 }
+
+[data-headlessui-state="open"] {
+  background: #0b1220 !important;
+  z-index: 9999 !important;
+}
