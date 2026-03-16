@@ -28,7 +28,7 @@ export default function ArenaLayout({
 
   return (
     <div className="mx-auto flex h-screen w-[min(1500px,calc(100vw-20px))] max-w-full flex-col py-[10px] max-[860px]:w-[min(100vw-12px,100%)]">
-      <div className="mb-2 flex h-[72px] shrink-0 items-center justify-between gap-3 px-1 max-[860px]:h-auto max-[860px]:flex-col max-[860px]:items-stretch overflow-visible">
+      <header className="relative z-[10000] mb-2 flex h-[72px] shrink-0 items-center justify-between gap-3 rounded-[20px] border border-gray-800 bg-[#0b1220] px-4 max-[860px]:h-auto max-[860px]:flex-col max-[860px]:items-stretch overflow-visible">
         <div className="flex items-center gap-4">
           <button
             className="group inline-flex items-center gap-2 rounded-full border border-arena-border/80 bg-[rgba(8,16,30,0.62)] px-4 py-2.5 text-sm font-medium text-arena-text"
@@ -61,9 +61,7 @@ export default function ArenaLayout({
           <UserMenu
             user={user}
             onProfile={() => navigate(`/profile/${storedUsername}`)}
-            onSubmissions={() =>
-              storedUsername ? navigate(`/profile/${encodeURIComponent(storedUsername)}/submissions`) : navigate("/submissions")
-            }
+            onRating={() => navigate("/leaderboard")}
             onSettings={() => navigate("/profile/settings")}
             onLogin={() => navigate("/login")}
             onRegister={() => navigate("/register")}
@@ -73,7 +71,7 @@ export default function ArenaLayout({
             }}
           />
         </div>
-      </div>
+      </header>
 
       <div className="min-h-0 flex-1 overflow-hidden">
         <ResizablePanelGroup id="arena-root-panels" orientation="horizontal" className="h-full min-h-0">

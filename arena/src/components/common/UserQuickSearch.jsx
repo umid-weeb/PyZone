@@ -8,7 +8,7 @@ export default function UserQuickSearch() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [status, setStatus] = useState("idle");
-  const debounced = useDebouncedValue(query, 250);
+  const debounced = useDebouncedValue(query, 300);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,31 +44,31 @@ export default function UserQuickSearch() {
   return (
     <div className="relative w-full max-w-[300px]">
       <input
-        className="w-full rounded-2xl border border-arena-border bg-[rgba(4,10,22,0.64)] px-4 py-[13px] text-arena-text outline-none transition focus:border-arena-borderStrong focus:ring-4 focus:ring-[rgba(108,146,255,0.1)]"
+        className="w-full rounded-xl border border-gray-800 bg-gray-900 px-4 py-2.5 text-sm text-gray-200 outline-none transition focus:border-gray-700 focus:ring-2 focus:ring-gray-700"
         placeholder="Search users"
         type="search"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
       />
       {query ? (
-        <div className="absolute left-0 right-0 top-[calc(100%+10px)] z-20 w-[320px] max-h-[220px] overflow-y-auto rounded-[12px] border border-arena-border bg-[rgba(15,23,42,0.98)] p-2 shadow-[0_10px_25px_rgba(0,0,0,0.35)]">
-          {status === "loading" ? <div className="px-2 py-1.5 text-sm text-arena-muted">Searching...</div> : null}
-          {status === "error" ? <div className="px-2 py-1.5 text-sm text-arena-muted">Search unavailable</div> : null}
+        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-[10001] w-[320px] max-h-[260px] overflow-y-auto rounded-xl border border-gray-800 bg-gray-900 p-2 text-gray-200 shadow-xl">
+          {status === "loading" ? <div className="px-3 py-2 text-sm text-gray-400">Searching…</div> : null}
+          {status === "error" ? <div className="px-3 py-2 text-sm text-gray-400">Search unavailable</div> : null}
           {status === "ready" && results.length === 0 ? (
-            <div className="px-2 py-1.5 text-sm text-arena-muted">No users found</div>
+            <div className="px-3 py-2 text-sm text-gray-400">No users found</div>
           ) : null}
           {results.map((user) => (
             <button
               key={user.id}
-              className="flex w-full items-center gap-10 rounded-[8px] px-12 py-0 text-left text-arena-text transition hover:bg-[rgba(255,255,255,0.05)]"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-gray-200 transition hover:bg-gray-800 hover:text-white"
               type="button"
               onClick={() => {
                 setQuery("");
                 setResults([]);
-                navigate(`/profile?username=${encodeURIComponent(user.username)}`);
+                navigate(`/profile/${encodeURIComponent(user.username)}`);
               }}
             >
-              <span className="grid h-[36px] w-[36px] place-items-center rounded-full border border-arena-border bg-[rgba(108,146,255,0.08)] text-sm font-semibold text-arena-primaryStrong">
+              <span className="grid h-9 w-9 place-items-center rounded-full border border-gray-800 bg-gray-950 text-xs font-semibold text-gray-200">
                 {user.username.slice(0, 1).toUpperCase()}
               </span>
               <span>{user.username}</span>

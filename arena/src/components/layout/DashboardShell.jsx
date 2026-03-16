@@ -17,7 +17,7 @@ export default function DashboardShell({ eyebrow, title, subtitle, actions, chil
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
+      <header className={`${styles.header} relative z-[10000] border-b border-gray-800 bg-[#0b1220]`}>
         <div className={styles.brand}>
           <button className={styles.back} type="button" onClick={() => navigate("/zone")}>
             Zone
@@ -34,9 +34,7 @@ export default function DashboardShell({ eyebrow, title, subtitle, actions, chil
             <UserMenu
               user={user}
               onProfile={() => navigate("/profile")}
-              onSubmissions={() =>
-                user?.username ? navigate(`/profile/${encodeURIComponent(user.username)}/submissions`) : navigate("/submissions")
-              }
+              onRating={() => navigate("/leaderboard")}
               onSettings={() => navigate("/profile/settings")}
               onLogin={() => navigate("/login")}
               onRegister={() => navigate("/register")}

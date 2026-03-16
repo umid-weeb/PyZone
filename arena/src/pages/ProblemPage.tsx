@@ -2,11 +2,8 @@ import { useEffect, useMemo, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import AuthPromptModal from "../components/common/AuthPromptModal.jsx";
 import CodeEditorPanel from "../components/editor/CodeEditorPanel.jsx";
-import ArenaLayout from "../components/layout/ArenaLayout.jsx";
-import ProblemList from "../components/problems/ProblemList.jsx";
-import ProblemViewer from "../components/problems/ProblemViewer.jsx";
-import ResultPanel from "../components/results/ResultPanel.jsx";
-import TestCasePanel from "../components/results/TestCasePanel.jsx";
+import ProblemDescription from "../components/problem/ProblemDescription.tsx";
+import TestTabs from "../components/tests/TestTabs.tsx";
 import { useArena } from "../context/ArenaContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -82,45 +79,41 @@ export default function ProblemPage() {
       });
   }, [params, problemKey, setParams, submitCode, token]);
 
-  async function handleProblemSelect(nextKey: string) {
-    await selectProblem(nextKey);
-    navigate(`/problems/${encodeURIComponent(nextKey)}`, { replace: true });
-  }
-
   const visibleCases = selectedProblem?.visible_testcases || [];
 
   return (
-    <ArenaLayout
-      sidebar={
-        <ProblemList
-          problems={filteredProblems}
-          loading={problemsStatus === "loading"}
-          search={search}
-          difficulty={difficulty}
-          selectedProblemId={selectedProblemId}
-          onSearchChange={setSearch}
-          onDifficultyChange={setDifficulty}
-          onSelect={handleProblemSelect}
-        />
-      }
-      viewer={<ProblemViewer problem={selectedProblem} loading={problemStatus === "loading"} />}
-      editor={
-        <CodeEditorPanel
-          code={code}
-          language={language}
-          hiddenTestCount={selectedProblem?.hidden_testcase_count || 0}
-          isRunning={isRunning}
-          isSubmitting={isSubmitting}
-          onChange={setCode}
-          onLanguageChange={setLanguage}
-          onRun={() => runCode().catch(() => {})}
-          onSubmit={() => submitCode(token).catch(() => {})}
-        />
-      }
-      testCases={<TestCasePanel cases={visibleCases} activeIndex={activeCaseIndex} onSelect={setActiveCaseIndex} />}
-      result={<ResultPanel result={result} busy={isRunning || isSubmitting} />}
-      authModal={<AuthPromptModal open={showAuthModal} problemId={problemKey} onClose={dismissAuthModal} />}
-    />
+    <>
+      <div className="flex h-[calc(100vh-40px)] min-h-[600px] bg-gray-950 text-gray-200">
+        <div className="w-1/2 min-w-0 border-r border-gray-800">
+          <ProblemDescription problem={selectedProblem} loading={problemStatus === "loading"} />
+        </div>
+        <div className="flex w-1/2 min-w-0 flex-col">
+          <div className="flex-1 border-b border-gray-800">
+            <CodeEditorPanel
+              code={code}
+              language={language}
+              hiddenTestCount={selectedProblem?.hidden_testcase_count || 0}
+              isRunning={isRunning}
+              isSubmitting={isSubmitting}
+              onChange={setCode}
+              onLanguageChange={setLanguage}
+              onRun={() => runCode().catch(() => {})}
+              onSubmit={() => submitCode(token).catch(() => {})}
+            />
+          </div>
+          <div className="h-[260px] min-h-[220px]">
+            <TestTabs
+              cases={visibleCases}
+              activeIndex={activeCaseIndex}
+              onSelect={setActiveCaseIndex}
+              result={result}
+              busy={isRunning || isSubmitting}
+            />
+          </div>
+        </div>
+      </div>
+      <AuthPromptModal open={showAuthModal} problemId={problemKey} onClose={dismissAuthModal} />
+    </>
   );
 }
 

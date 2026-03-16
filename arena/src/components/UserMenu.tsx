@@ -14,7 +14,7 @@ type ArenaUser = {
 type UserMenuProps = {
   user?: ArenaUser | null;
   onProfile: () => void;
-  onSubmissions: () => void;
+  onRating: () => void;
   onSettings: () => void;
   onLogout: () => void | Promise<void>;
   onLogin: () => void;
@@ -109,6 +109,20 @@ function SettingsIcon({ className = "" }: IconProps) {
   );
 }
 
+function ChartIcon({ className = "" }: IconProps) {
+  return (
+    <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
+      <path
+        d="M4.5 19.5V4.5m0 15h15M8.25 16.5v-6m3.75 6V7.5m3.75 9v-3"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
 function LogoutIcon({ className = "" }: IconProps) {
   return (
     <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
@@ -173,7 +187,7 @@ function ActionItem({ label, icon, onClick, tone = "default" }: ActionItemProps)
 export default function UserMenu({
   user,
   onProfile,
-  onSubmissions,
+  onRating,
   onSettings,
   onLogout,
   onLogin,
@@ -188,7 +202,7 @@ export default function UserMenu({
     <Menu as="div" className="relative">
       <MenuButton
         aria-label="User menu"
-        className="group flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-arena-border bg-white/5 text-arena-primaryStrong shadow-[0_10px_24px_rgba(0,0,0,0.18)] transition hover:border-arena-borderStrong hover:bg-white/10 focus:outline-none focus-visible:border-arena-borderStrong focus-visible:ring-4 focus-visible:ring-[rgba(108,146,255,0.14)]"
+        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-gray-800 text-gray-200 transition hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500"
         type="button"
       >
         {isAuthenticated && avatarSrc ? (
@@ -213,7 +227,7 @@ export default function UserMenu({
         leaveFrom="translate-y-0 scale-100 opacity-100"
         leaveTo="translate-y-1 scale-95 opacity-0"
       >
-        <MenuItems className="absolute right-0 z-[9999] mt-3 w-60 rounded-xl border border-gray-700 bg-gray-900 text-gray-200 shadow-xl focus:outline-none">
+        <MenuItems className="absolute right-0 mt-2 w-60 origin-top-right rounded-xl border border-gray-700 bg-gray-900 text-gray-200 shadow-xl z-[10001] focus:outline-none">
           {isAuthenticated ? (
             <div className="space-y-1 p-2">
               <ActionItem
@@ -222,9 +236,9 @@ export default function UserMenu({
                 onClick={onProfile}
               />
               <ActionItem
-                icon={<ListIcon className="h-4 w-4" />}
-                label="Submissions"
-                onClick={onSubmissions}
+                icon={<ChartIcon className="h-4 w-4" />}
+                label="Rating"
+                onClick={onRating}
               />
               <ActionItem
                 icon={<SettingsIcon className="h-4 w-4" />}
