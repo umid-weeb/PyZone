@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: judge-service
+  namespace: pyzone
+  labels:
+    app: judge-service
+spec:
+  replicas: 3 # Oddiy vaqtda kamida 3 ta worker bo'ladi
+  selector:
+    matchLabels:
+      app: judge-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0 # Zero-downtime deployment uchun
+  template:
+    metadata:
+      labels:
+        app: judge-service
+    spec:
+      containers:
+      - name: judge-service
+        image: ghcr.io/pyzone/judge-service:latest
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+          limits:
+            cpu: "2000m"
+            memory: "2Gi"
+        env:
+        - name: KAFKA_BROKER
+          value: "kafka-cluster:9092"
+        - name: REDIS_URL
+          value: "redis://redis-master:6379"
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: judge-service-hpa
+  namespace: pyzone
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: judge-service
+  minReplicas: 3
+  maxReplicas: 50 # Contest vaqtida navbat ko'paysa 50 tagacha server qo'shiladi
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70 # CPU 70% dan oshganda yangi pod qo'shiladi

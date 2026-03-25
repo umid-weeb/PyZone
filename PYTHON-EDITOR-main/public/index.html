@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f3f6fb">
+    <meta name="robots" content="index, follow">
+    <title>Isroilov's Online Editor</title>
+    <link rel="icon" href="./ryempo.ico" type="image/x-icon">
+    <link rel="canonical" href="https://pyzone.uz/">
+    <meta property="og:site_name" content="Isroilov's Online Editor">
+    <meta property="og:title" content="Isroilov's Online Editor">
+    <meta property="og:description" content="Onlayn Python muharriri: kod yozing, ishga tushiring va natijalarni ko'ring.">
+    <meta property="og:url" content="https://pyzone.uz/">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://pyzone.uz/python_icon_round.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Isroilov's Online Editor">
+    <meta name="twitter:description" content="Onlayn Python muharriri">
+    <meta name="twitter:image" content="https://pyzone.uz/python_icon_round.png">
+    <meta name="description" content="Python uchun professional online editor. Kod yozing, ishga tushiring va natijalarni brauzer ichida ko'ring.">
+    <meta name="keywords" content="online python editor, python browser editor, python code runner, dasturlash online, python muharrir, browser python, online IDE, pyodide python, python web editor, python code sandbox, python learning tool, pyzone">
+    <meta name="author" content="Isroilov's Team">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anonymous+Pro:wght@400;700&family=Azeret+Mono:wght@400;500;600&family=Courier+Prime:wght@400;700&family=Fira+Code:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Inconsolata:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Roboto+Mono:wght@400;500;600&family=Source+Code+Pro:wght@400;500;600&family=Space+Mono:wght@400;700&family=Ubuntu+Mono:wght@400;700&family=Victor+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/eclipse.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/show-hint.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldgutter.min.css">
+    <link rel="stylesheet" href="./style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/show-hint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/python-hint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/anyword-hint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closebrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/active-line.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/search/searchcursor.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/search/search.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldgutter.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/indent-fold.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+    <script src="./real.js" defer></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-7JLFXRSXHH"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag("js", new Date());
+        gtag("config", "G-7JLFXRSXHH");
+    </script>
+    <script>
+        var _iub = _iub || [];
+        _iub.csConfiguration = { "siteId": 4343250, "cookiePolicyId": 29133168, "lang": "en", "storage": { "useSiteId": true } };
+    </script>
+    <script src="https://cs.iubenda.com/autoblocking/4343250.js"></script>
+    <script src="//cdn.iubenda.com/cs/gpp/stub.js"></script>
+    <script src="//cdn.iubenda.com/cs/iubenda_cs.js" charset="UTF-8" async></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <span class="status-indicator">
+                    <img class="fa-python" src="./image.png" alt="Python online compiler">
+                </span>
+                Python Online Editor
+            </h1>
+            <div class="header-buttons">
+                <button class="btn-run" onclick="runCode()" type="button">
+                    <span class="btn-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M8 6l10 6-10 6V6z"></path></svg>
+                    </span>
+                    <span class="button-label">Run</span>
+                </button>
+                <button class="btn-debug" onclick="debugCode()" type="button" title="Ctrl+Shift+Enter">
+                    <span class="btn-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M9 3h6"></path><path d="M10 3v3"></path><path d="M14 3v3"></path><path d="M8 9h8"></path><path d="M7 6h10l3 4v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4v-6l3-4z"></path><path d="M9 13h.01"></path><path d="M15 13h.01"></path><path d="M9 17h6"></path></svg>
+                    </span>
+                    <span class="button-label">Debug</span>
+                </button>
+                <button class="btn-arena" onclick="openArena()" type="button" title="LeetCode-style Arena">
+                    <span class="btn-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M4 6h16"></path><path d="M4 12h10"></path><path d="M4 18h7"></path><path d="M16 10l4 2-4 2v-4z"></path></svg>
+                    </span>
+                    <span class="button-label">Zone</span>
+                </button>
+                <button class="btn-format" onclick="formatEditorCode()" type="button" title="Ctrl+Shift+F">
+                    <span class="btn-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M4 7h16"></path><path d="M7 12h10"></path><path d="M10 17h4"></path></svg>
+                    </span>
+                    <span class="button-label">Format</span>
+                </button>
+                <button class="btn-clear" onclick="clearOutput()" type="button">
+                    <span class="btn9icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M4 7h16"></path><path d="M9 7V4h6v3"></path><path d="M8 11v7"></path><path d="M12 11v7"></path><path d="M16 11v7"></path><path d="M6 7l1 13h10l1-13"></path></svg>
+                    </span>
+                    <span class="button-label">Clear</span>
+                </button>
+                <button class="btn-save" onclick="saveCode()" type="button">
+                    <span class="btn-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5V4z"></path><path d="M8 4v6h8"></path><path d="M8 16h8"></path></svg>
+                    </span>
+                    <span class="button-label">Save</span>
+                </button>
+                <button class="btn-load" onclick="loadCode()" type="button">
+                    <span class="btn-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M12 3v11"></path><path d="M8 10l4 4 4-4"></path><path d="M5 20h14"></path></svg>
+                    </span>
+                    <span class="button-label">Load</span>
+                </button>
+                <button class="btn-download" onclick="downloadCode()" type="button">
+                    <span class="btn-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M12 3v11"></path><path d="M8 11l4 4 4-4"></path><path d="M5 20h14"></path></svg>
+                    </span>
+                    <span class="button-label">Download</span>
+                </button>
+                <button class="btn-upload" onclick="document.getElementById('fileInput').click()" type="button">
+                    <span class="btn-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M12 21V10"></path><path d="M8 13l4-4 4 4"></path><path d="M5 4h14"></path></svg>
+                    </span>
+                    <span class="button-label">Upload</span>
+                </button>
+                <button class="btn-theme" onclick="toggleTheme()" id="themeBtn" type="button">
+                    <span class="btn-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"></path></svg>
+                    </span>
+                    <span class="button-label">Dark</span>
+                </button>
+                <input type="file" id="fileInput" accept=".py,.txt" onchange="uploadFile(event)">
+            </div>
+        </div>
+
+        <div class="loading" id="loading">Python muhiti yuklanmoqda...</div>
+
+        <div class="editor-container">
+            <div class="editor-panel">
+                <div class="panel-header panel-header-with-controls">
+                    <span class="panel-title">Kod muharriri</span>
+                    <div class="editor-header-controls">
+                        <label class="editor-control">
+                            <span class="editor-control-label">Font</span>
+                            <span class="editor-select-shell">
+                                <select id="editor-font-family" class="editor-select">
+                                    <option value="IBM Plex Mono">IBM Plex Mono</option>
+                                    <option value="JetBrains Mono">JetBrains Mono</option>
+                                    <option value="Fira Code">Fira Code</option>
+                                    <option value="Victor Mono">Victor Mono</option>
+                                    <option value="Inconsolata">Inconsolata</option>
+                                    <option value="Azeret Mono">Azeret Mono</option>
+                                    <option value="Source Code Pro">Source Code Pro</option>
+                                    <option value="Roboto Mono">Roboto Mono</option>
+                                    <option value="Space Mono">Space Mono</option>
+                                    <option value="Ubuntu Mono">Ubuntu Mono</option>
+                                    <option value="Courier Prime">Courier Prime</option>
+                                    <option value="Anonymous Pro">Anonymous Pro</option>
+                                </select>
+                            </span>
+                        </label>
+                        <label class="editor-control">
+                            <span class="editor-control-label">Size</span>
+                            <span class="editor-select-shell">
+                                <select id="editor-font-size" class="editor-select">
+                                    <option value="12px">12px</option>
+                                    <option value="14px" selected>14px</option>
+                                    <option value="16px">16px</option>
+                                    <option value="18px">18px</option>
+                                    <option value="20px">20px</option>
+                                    <option value="22px">22px</option>
+                                    <option value="24px">24px</option>
+                                </select>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                <textarea id="code-editor">print("Salom, Python!")
+</textarea>
+                <div class="editor-statusbar">
+                    <div id="editor-status-primary">Ln 1, Col 1</div>
+                    <div id="editor-status-secondary">Spaces: 4</div>
+                </div>
+            </div>
+            <div
+                class="panel-resizer"
+                id="panel-resizer"
+                role="separator"
+                aria-label="Panellar o'lchamini o'zgartirish"
+                aria-orientation="vertical"
+                tabindex="0"
+            ></div>
+
+            <div class="output-panel">
+                <div class="panel-header">Natija</div>
+                <div class="output-content" id="output">Natija bu yerda ko'rsatiladi...</div>
+                <div class="debug-panel" id="debug-panel">
+                    <div class="debug-toolbar">
+                        <div class="debug-meta">
+                            <div class="debug-badge">Debugger</div>
+                            <div class="debug-summary" id="debug-summary">Debug sessiya hali boshlanmagan.</div>
+                        </div>
+                        <div class="debug-nav">
+                            <button type="button" id="debug-prev">Oldingi</button>
+                            <button type="button" id="debug-next">Keyingi</button>
+                            <button type="button" id="debug-breakpoint">Nuqta</button>
+                            <button type="button" id="debug-close">Yopish</button>
+                        </div>
+                    </div>
+                    <div class="debug-body">
+                        <div class="debug-step-card">
+                            <div class="debug-step-header">
+                                <span id="debug-step-counter">0 / 0</span>
+                                <span id="debug-step-location">Qator tanlanmagan</span>
+                            </div>
+                            <pre class="debug-step-line" id="debug-step-line">Debugger qadamlarini ko'rish uchun "Debug" tugmasini bosing.</pre>
+                        </div>
+                        <div class="debug-vars-card">
+                            <div class="debug-vars-title">O'zgaruvchilar</div>
+                            <div class="debug-vars-list" id="debug-vars-list">
+                                <div class="debug-empty">Hali ko'rsatish uchun qadam yo'q.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="output-input-host" id="output-input-host"></div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

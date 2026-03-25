@@ -1,0 +1,78 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    font-family: "IBM Plex Sans", sans-serif;
+    --arena-bg:
+      radial-gradient(circle at top left, rgba(76, 117, 255, 0.18), transparent 22%),
+      radial-gradient(circle at top right, rgba(46, 196, 182, 0.12), transparent 20%),
+      linear-gradient(135deg, #06101f 0%, #0b1730 45%, #081423 100%);
+    --arena-surface: rgba(10, 18, 34, 0.88);
+    --arena-surface-strong: rgba(15, 25, 47, 0.96);
+    --arena-surface-soft: rgba(255, 255, 255, 0.03);
+    --arena-border: rgba(122, 158, 255, 0.18);
+    --arena-border-strong: rgba(122, 158, 255, 0.34);
+    --arena-text: #edf2ff;
+    --arena-muted: #8ca3c9;
+    --arena-primary: #6c92ff;
+    --arena-primary-strong: #96b4ff;
+    --arena-success: #57dfb4;
+    --arena-warning: #ffcc66;
+    --arena-danger: #ff7b8f;
+    --arena-shadow: 0 24px 64px rgba(0, 0, 0, 0.34);
+    --arena-radius-lg: 28px;
+    --arena-radius-md: 18px;
+    --arena-radius-sm: 12px;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    min-height: 100%;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  body {
+    @apply m-0 bg-[#050c18] font-sans text-arena-text antialiased;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  img {
+    display: block;
+    max-width: 100%;
+  }
+
+  code,
+  pre,
+  .monaco-editor {
+    font-family: "IBM Plex Mono", monospace !important;
+  }
+}
+
+[data-headlessui-state="open"] {
+  background: #0b1220 !important;
+  z-index: 9999 !important;
+}

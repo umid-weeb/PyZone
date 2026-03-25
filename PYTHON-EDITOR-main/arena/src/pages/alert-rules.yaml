@@ -1,0 +1,30 @@
+groups:
+  - name: pyzone-alerts
+    rules:
+      # 1. Judge navbati juda ko'payib ketsa (Contest vaqtida podlar yetishmayotgan bo'lishi mumkin)
+      - alert: HighJudgeQueueDepth
+        expr: judge_queue_size > 100
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Judge queue is piling up (>100 submissions)"
+          description: "Submissions are taking too long to be processed. Consider scaling up Judge workers."
+
+      # 2. Xatoliklar soni (500, 502, 503) 5% dan oshib ketsa
+      - alert: HighApiErrorRate
+        expr: sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High API error rate detected (> 5%)"
+
+      # 3. Judge worker'lar Crash bo'lib qayta ishga tushaverganda (OOMKilled ehtimoli)
+      - alert: WorkerCrashLoop
+        expr: rate(kube_pod_container_status_restarts_total{container="judge-worker"}[15m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Judge workers are crashing frequently. Check for Memory Leaks."

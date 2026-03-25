@@ -1,0 +1,46 @@
+.card {
+  border: 1px solid var(--arena-border);
+  border-radius: 24px;
+  background: var(--arena-surface);
+  box-shadow: var(--arena-shadow);
+  padding: 22px;
+}
+
+.state {
+  color: var(--arena-muted);
+}
+
+.tableWrap {
+  overflow: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 16px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.table th {
+  color: var(--arena-muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.table tbody tr:hover {
+  background: rgba(108, 146, 255, 0.06);
+}
+
+.success {
+  color: var(--arena-success);
+}
+
+.danger {
+  color: var(--arena-danger);
+}

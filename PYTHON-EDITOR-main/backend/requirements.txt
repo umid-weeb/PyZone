@@ -1,0 +1,19 @@
+fastapi==0.115.12
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+httpx==0.28.1
+PyYAML==6.0.2
+celery==5.5.1
+redis==5.2.1
+pytest==8.3.5
+PyJWT==2.10.1
+# Auth
+bcrypt==4.0.1
+passlib[bcrypt]==1.7.4
+python-jose==3.3.0
+# DB
+SQLAlchemy==2.0.36
+psycopg2-binary==2.9.10
+python-dotenv==1.0.1
+requests==2.32.3
+supabase==2.15.0

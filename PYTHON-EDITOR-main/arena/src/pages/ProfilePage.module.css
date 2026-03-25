@@ -1,0 +1,193 @@
+.heroGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+  gap: 18px;
+}
+
+.card {
+  border: 1px solid var(--arena-border);
+  border-radius: 24px;
+  background: var(--arena-surface);
+  box-shadow: var(--arena-shadow);
+  padding: 22px;
+}
+
+.heroTitle {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.heroTitle h2 {
+  margin: 0;
+}
+
+.avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(108, 146, 255, 0.1);
+  border: 1px solid var(--arena-border);
+  color: var(--arena-primary-strong);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.heroMeta {
+  margin-top: 18px;
+  display: grid;
+  gap: 10px;
+  color: var(--arena-muted);
+}
+
+.pillRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.pill {
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--arena-border);
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.statCard {
+  border: 1px solid var(--arena-border);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 18px;
+}
+
+.statCard strong {
+  display: block;
+  font-size: 1.9rem;
+  margin-top: 10px;
+}
+
+.muted {
+  color: var(--arena-muted);
+}
+
+.sectionTitle {
+  margin: 0 0 18px;
+  font-size: 1.15rem;
+}
+
+.activityGrid {
+  display: grid;
+  grid-template-columns: repeat(26, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.activityCell {
+  aspect-ratio: 1;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.level1 {
+  background: rgba(87, 223, 180, 0.2);
+}
+
+.level2 {
+  background: rgba(87, 223, 180, 0.38);
+}
+
+.level3 {
+  background: rgba(87, 223, 180, 0.68);
+}
+
+.list {
+  display: grid;
+  gap: 12px;
+}
+
+.recentItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--arena-border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.forms {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.form {
+  display: grid;
+  gap: 14px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--arena-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--arena-text);
+  outline: none;
+}
+
+.buttonRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.primary,
+.secondary {
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary {
+  border: 0;
+  background: linear-gradient(135deg, #5b84ff, #7fa0ff);
+  color: white;
+}
+
+.secondary {
+  border: 1px solid var(--arena-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--arena-text);
+}
+
+.status {
+  color: var(--arena-muted);
+}
+
+@media (max-width: 980px) {
+  .heroGrid,
+  .forms,
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .activityGrid {
+    grid-template-columns: repeat(13, minmax(0, 1fr));
+  }
+}

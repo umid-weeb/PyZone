@@ -1,0 +1,41 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  api:
+    build: .
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./app:/app/app
+      - ./examples:/app/examples
+      - ./.data:/app/.data
+
+  worker:
+    build: .
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - api
+    command: celery -A app.worker.celery_app.celery_app worker --loglevel=info
+    volumes:
+      - ./app:/app/app
+      - ./examples:/app/examples
+      - ./.data:/app/.data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  nginx:
+    image: nginx:1.27-alpine
+    depends_on:
+      - api
+    ports:
+      - "8080:80"
+    volumes:
+      - ../public:/usr/share/nginx/html:ro
+      - ./deploy/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro

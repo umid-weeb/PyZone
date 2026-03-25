@@ -1,0 +1,23 @@
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.label {
+  font-weight: 600;
+}
+
+.input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--arena-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--arena-text);
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--arena-border-strong);
+  box-shadow: 0 0 0 4px rgba(108, 146, 255, 0.1);
+}

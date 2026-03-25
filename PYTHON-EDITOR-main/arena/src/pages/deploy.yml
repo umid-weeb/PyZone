@@ -1,0 +1,60 @@
+name: Production Deploy (Zero Downtime)
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: pyzone/api
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Go / Node.js
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      - name: Run Unit Tests
+        run: go test -v ./...
+
+  build-and-scan:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Build Docker Image
+        run: docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} -f backend/Dockerfile .
+        
+      - name: Run Trivy Security Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}'
+          format: 'table'
+          exit-code: '1' # Agar CRITICAL zaiflik topilsa pipeline fail bo'ladi!
+          severity: 'CRITICAL,HIGH'
+          
+      - name: Push Docker Image
+        run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+  deploy:
+    needs: build-and-scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Kubeconfig
+        uses: azure/k8s-set-context@v3
+        with:
+          kubeconfig: ${{ secrets.KUBECONFIG }}
+      - name: Deploy to Kubernetes (Rolling Update)
+        run: |
+          kubectl set image deployment/api-service api-service=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} -n pyzone
+          kubectl rollout status deployment/api-service -n pyzone --timeout=5m
