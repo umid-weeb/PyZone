@@ -3,6 +3,9 @@ import { useParams } from "react-router-dom";
 import DashboardShell from "../../components/layout/DashboardShell.jsx";
 import Avatar from "../../components/profile/Avatar";
 import RatingBadge from "../../components/profile/RatingBadge";
+import CircularProgress from "../../components/profile/CircularProgress";
+import ActivityHeatmap from "../../components/profile/ActivityHeatmap";
+import BadgeDisplay from "../../components/profile/BadgeDisplay";
 import { useAuth } from "../../context/AuthContext.jsx";
 import {
   buildActivityHeatmap,
@@ -13,46 +16,41 @@ import {
 } from "../../lib/formatters.js";
 import { getMyActivity, getMySubmissions, getPublicProfile, type PublicProfile, type SubmissionRow } from "../../services/profileService";
 
-function StatCard({ label, value }: { label: string; value: React.ReactNode }) {
+function StatCard({ label, value, subtext }: { label: string; value: React.ReactNode; subtext?: string }) {
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
       <div className="text-xs font-semibold uppercase tracking-[0.12em] text-arena-muted">{label}</div>
       <div className="mt-1 text-xl font-semibold text-arena-text">{value}</div>
+      {subtext && <div className="mt-0.5 text-xs text-arena-muted">{subtext}</div>}
     </div>
   );
 }
 
-function MiniBars({
-  items,
-  totalLabel,
-}: {
-  items: Array<{ key: string; label: string; value: number; className: string }>;
-  totalLabel: string;
+function DifficultyBar({ 
+  label, 
+  solved, 
+  total, 
+  colorClass 
+}: { 
+  label: string; 
+  solved: number; 
+  total: number; 
+  colorClass: string;
 }) {
-  const total = items.reduce((sum, it) => sum + it.value, 0);
+  const percentage = total > 0 ? (solved / total) * 100 : 0;
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-arena-text">{totalLabel}</h2>
-        <div className="text-xs text-arena-muted">{total}</div>
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-arena-muted">{label}</span>
+        <span className="font-medium text-arena-text">
+          {solved} <span className="text-arena-muted">/ {total}</span>
+        </span>
       </div>
-      <div className="mt-4 space-y-3">
-        {items.map((it) => {
-          const pct = total > 0 ? Math.round((it.value / total) * 100) : 0;
-          return (
-            <div key={it.key}>
-              <div className="flex items-center justify-between text-xs text-arena-muted">
-                <span>{it.label}</span>
-                <span>
-                  {it.value} ({pct}%)
-                </span>
-              </div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/5">
-                <div className={`h-full ${it.className}`} style={{ width: `${pct}%` }} />
-              </div>
-            </div>
-          );
-        })}
+      <div className="h-2 overflow-hidden rounded-full bg-white/5">
+        <div 
+          className={`h-full transition-all duration-500 ${colorClass}`} 
+          style={{ width: `${percentage}%` }} 
+        />
       </div>
     </div>
   );
@@ -94,44 +92,46 @@ export default function ProfileDashboardPage() {
   }, [isOwnProfile, username]);
 
   const activityDays = useMemo(() => buildActivityHeatmap(activity), [activity]);
+  const fullYearActivity = useMemo(() => {
+    // Build a full year of activity data
+    const counts = new Map<string, number>();
+    activity.forEach((entry) => {
+      if (entry?.date) {
+        counts.set(entry.date.slice(0, 10), Number(entry.count || 0));
+      }
+    });
+
+    const days = [];
+    const today = new Date();
+    for (let index = 364; index >= 0; index -= 1) {
+      const current = new Date(today);
+      current.setDate(today.getDate() - index);
+      const iso = current.toISOString().slice(0, 10);
+      const count = counts.get(iso) || 0;
+      days.push({
+        date: iso,
+        count,
+        level: count >= 5 ? 4 : count >= 3 ? 3 : count >= 2 ? 2 : count >= 1 ? 1 : 0,
+      });
+    }
+    return days;
+  }, [activity]);
+
   const acceptance = useMemo(() => calculateAcceptanceRate(submissions), [submissions]);
   const currentStreak = useMemo(() => calculateCurrentStreak(activityDays), [activityDays]);
   const bestStreak = useMemo(() => calculateBestStreak(activityDays), [activityDays]);
-  const languageDistribution = useMemo(() => {
-    const counts = new Map<string, number>();
-    submissions.forEach((s) => {
-      const lang = (s.language || "Unknown").trim() || "Unknown";
-      counts.set(lang, (counts.get(lang) || 0) + 1);
-    });
-    const entries = Array.from(counts.entries())
-      .map(([lang, value]) => ({ lang, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 6);
-    const palette = ["bg-sky-400/80", "bg-emerald-400/80", "bg-violet-400/80", "bg-amber-400/80", "bg-rose-400/80", "bg-teal-400/80"];
-    return entries.map((e, idx) => ({
-      key: e.lang,
-      label: e.lang,
-      value: e.value,
-      className: palette[idx % palette.length],
-    }));
-  }, [submissions]);
 
-  const difficultyDistribution = useMemo(() => {
-    const counts = { easy: 0, medium: 0, hard: 0, unknown: 0 };
-    submissions.forEach((s) => {
-      const d = (s.difficulty || "").toLowerCase();
-      if (d.includes("easy")) counts.easy += 1;
-      else if (d.includes("medium")) counts.medium += 1;
-      else if (d.includes("hard")) counts.hard += 1;
-      else counts.unknown += 1;
-    });
-    return [
-      { key: "easy", label: "Easy", value: counts.easy, className: "bg-emerald-400/80" },
-      { key: "medium", label: "Medium", value: counts.medium, className: "bg-amber-400/80" },
-      { key: "hard", label: "Hard", value: counts.hard, className: "bg-rose-400/80" },
-      { key: "unknown", label: "Unknown", value: counts.unknown, className: "bg-slate-400/70" },
-    ].filter((x) => x.value > 0);
-  }, [submissions]);
+  // Problem totals (these would ideally come from API)
+  const problemTotals = useMemo(() => ({
+    easy: { solved: profile?.solved_easy ?? 0, total: 150 },
+    medium: { solved: profile?.solved_medium ?? 0, total: 300 },
+    hard: { solved: profile?.solved_hard ?? 0, total: 150 },
+  }), [profile]);
+
+  const totalSubmissions = useMemo(() => 
+    fullYearActivity.reduce((sum, d) => sum + d.count, 0), 
+    [fullYearActivity]
+  );
 
   return (
     <DashboardShell
@@ -158,14 +158,26 @@ export default function ProfileDashboardPage() {
       }
     >
       {status === "loading" ? (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-arena-muted">Loading profile…</div>
+        <div className="flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 p-12">
+          <div className="flex items-center gap-3 text-arena-muted">
+            <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            Loading profile...
+          </div>
+        </div>
       ) : null}
+      
       {status === "error" ? (
         <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-arena-muted">Failed to load profile.</div>
       ) : null}
+      
       {status === "ready" && profile ? (
         <div className="space-y-6">
-          <section className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+          {/* Top Section: User Info + Circular Progress */}
+          <section className="grid gap-6 lg:grid-cols-[1fr_auto]">
+            {/* User Info Card */}
             <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
               <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex items-center gap-4">
@@ -192,89 +204,132 @@ export default function ProfileDashboardPage() {
               {profile.bio ? <p className="mt-5 max-w-3xl text-sm leading-relaxed text-arena-text/90">{profile.bio}</p> : null}
             </div>
 
-            <div className="grid gap-4 rounded-2xl border border-white/10 bg-white/5 p-6 sm:grid-cols-2">
-              <StatCard label="Solved" value={profile.solved_total ?? 0} />
-              <StatCard label="Acceptance" value={acceptance != null ? `${acceptance}%` : "--"} />
-              <StatCard label="Current streak" value={isOwnProfile ? currentStreak : "--"} />
-              <StatCard label="Best streak" value={isOwnProfile ? bestStreak : "--"} />
-              <StatCard label="Easy" value={profile.solved_easy ?? 0} />
-              <StatCard label="Medium" value={profile.solved_medium ?? 0} />
-              <StatCard label="Hard" value={profile.solved_hard ?? 0} />
-              <StatCard label="Submissions" value={isOwnProfile ? submissions.length : "--"} />
+            {/* Circular Progress (LeetCode style) */}
+            <div className="flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 p-6">
+              <CircularProgress data={problemTotals} size={200} />
             </div>
           </section>
 
-          <section className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-arena-text">Activity</h2>
-                <div className="text-xs text-arena-muted">Last ~6 months</div>
-              </div>
-              {isOwnProfile ? (
-                <div className="mt-4 grid grid-cols-[repeat(26,minmax(0,1fr))] gap-1">
-                  {activityDays.slice(-26 * 7).map((day) => (
-                    <div
-                      key={day.date}
-                      title={`${day.date}: ${day.count} submissions`}
-                      className={[
-                        "h-3 w-3 rounded-[4px] border border-white/5",
-                        day.level === 0
-                          ? "bg-white/5"
-                          : day.level === 1
-                            ? "bg-emerald-500/30"
-                            : day.level === 2
-                              ? "bg-emerald-500/55"
-                              : "bg-emerald-400/80",
-                      ].join(" ")}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-4 text-sm text-arena-muted">Activity heatmap is only visible to the account owner.</div>
-              )}
-            </div>
+          {/* Stats Grid */}
+          <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard label="Rating" value={profile.rating ?? 800} subtext={profile.global_rank ? `Rank #${profile.global_rank}` : undefined} />
+            <StatCard label="Total Solved" value={profile.solved_total ?? 0} />
+            <StatCard label="Acceptance" value={acceptance != null ? `${acceptance}%` : "--"} />
+            <StatCard 
+              label="Current Streak" 
+              value={isOwnProfile ? `${currentStreak} days` : "--"} 
+              subtext={isOwnProfile && bestStreak > 0 ? `Best: ${bestStreak} days` : undefined}
+            />
+          </section>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-arena-text">Recent submissions</h2>
-                <a className="text-xs font-semibold text-arena-primaryStrong hover:underline" href={`/profile/${encodeURIComponent(username)}/submissions`}>
-                  Open table
-                </a>
-              </div>
-              {isOwnProfile ? (
-                <div className="mt-4 divide-y divide-white/5 overflow-hidden rounded-xl border border-white/10 bg-[#0b1220]">
-                  {submissions.slice(0, 6).map((s, idx) => (
-                    <div key={`${s.problem_id}-${idx}`} className="flex items-center justify-between gap-4 px-4 py-3">
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-medium text-arena-text">{s.problem_title || s.problem_id}</div>
-                        <div className="mt-1 text-xs text-arena-muted">
-                          {s.created_at ? new Date(s.created_at).toLocaleString() : "--"}
-                        </div>
-                      </div>
-                      <div className="shrink-0 text-sm text-arena-muted">
-                        {(s.status || s.verdict || "--").toString()}
-                      </div>
-                    </div>
-                  ))}
-                  {submissions.length === 0 ? (
-                    <div className="px-4 py-6 text-sm text-arena-muted">No submissions yet.</div>
-                  ) : null}
-                </div>
-              ) : (
-                <div className="mt-4 text-sm text-arena-muted">Submission history is only visible to the account owner right now.</div>
-              )}
+          {/* Difficulty Breakdown */}
+          <section className="rounded-2xl border border-white/10 bg-white/5 p-6">
+            <h2 className="mb-4 text-sm font-semibold text-arena-text">Solved Problems</h2>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <DifficultyBar 
+                label="Easy" 
+                solved={problemTotals.easy.solved} 
+                total={problemTotals.easy.total} 
+                colorClass="bg-emerald-400" 
+              />
+              <DifficultyBar 
+                label="Medium" 
+                solved={problemTotals.medium.solved} 
+                total={problemTotals.medium.total} 
+                colorClass="bg-amber-400" 
+              />
+              <DifficultyBar 
+                label="Hard" 
+                solved={problemTotals.hard.solved} 
+                total={problemTotals.hard.total} 
+                colorClass="bg-rose-400" 
+              />
             </div>
           </section>
 
+          {/* Activity Heatmap */}
           {isOwnProfile ? (
-            <section className="grid gap-4 lg:grid-cols-2">
-              <MiniBars items={languageDistribution} totalLabel="Language usage" />
-              <MiniBars items={difficultyDistribution} totalLabel="Difficulty distribution" />
+            <section className="rounded-2xl border border-white/10 bg-white/5 p-6">
+              <ActivityHeatmap days={fullYearActivity} totalSubmissions={totalSubmissions} />
+            </section>
+          ) : (
+            <section className="rounded-2xl border border-white/10 bg-white/5 p-6">
+              <h2 className="mb-3 text-sm font-semibold text-arena-text">Activity</h2>
+              <div className="text-sm text-arena-muted">Activity heatmap is only visible to the account owner.</div>
+            </section>
+          )}
+
+          {/* Badges Section */}
+          {isOwnProfile ? (
+            <section className="rounded-2xl border border-white/10 bg-white/5 p-6">
+              <BadgeDisplay
+                solvedCount={profile.solved_total ?? 0}
+                currentStreak={currentStreak}
+                bestStreak={bestStreak}
+                easySolved={profile.solved_easy ?? 0}
+                mediumSolved={profile.solved_medium ?? 0}
+                hardSolved={profile.solved_hard ?? 0}
+              />
             </section>
           ) : null}
+
+          {/* Recent Submissions */}
+          <section className="rounded-2xl border border-white/10 bg-white/5 p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-arena-text">Recent Submissions</h2>
+              <a 
+                className="text-xs font-semibold text-arena-primaryStrong hover:underline" 
+                href={`/profile/${encodeURIComponent(username)}/submissions`}
+              >
+                View all
+              </a>
+            </div>
+            {isOwnProfile ? (
+              <div className="divide-y divide-white/5 overflow-hidden rounded-xl border border-white/10 bg-[#0b1220]">
+                {submissions.slice(0, 8).map((s, idx) => {
+                  const statusLower = String(s.status || s.verdict || "").toLowerCase();
+                  const isAccepted = statusLower.includes("accepted");
+                  return (
+                    <div key={`${s.problem_id}-${idx}`} className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-white/5">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${isAccepted ? 'bg-emerald-500/20' : 'bg-rose-500/20'}`}>
+                          {isAccepted ? (
+                            <svg className="h-3.5 w-3.5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          ) : (
+                            <svg className="h-3.5 w-3.5 text-rose-400" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-medium text-arena-text">{s.problem_title || s.problem_id}</div>
+                          <div className="mt-0.5 flex items-center gap-2 text-xs text-arena-muted">
+                            <span>{s.language || "Unknown"}</span>
+                            <span>•</span>
+                            <span>{s.created_at ? new Date(s.created_at).toLocaleDateString() : "--"}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${isAccepted ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                        {isAccepted ? "Accepted" : (s.status || s.verdict || "--")}
+                      </div>
+                    </div>
+                  );
+                })}
+                {submissions.length === 0 ? (
+                  <div className="px-4 py-8 text-center text-sm text-arena-muted">No submissions yet. Start solving problems!</div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-white/10 bg-[#0b1220] px-4 py-8 text-center text-sm text-arena-muted">
+                Submission history is only visible to the account owner.
+              </div>
+            )}
+          </section>
         </div>
       ) : null}
     </DashboardShell>
   );
 }
-
