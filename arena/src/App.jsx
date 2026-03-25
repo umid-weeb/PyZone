@@ -16,13 +16,17 @@ import ProblemPage from "./pages/ProblemPage.tsx";
 import ContestsPage from "./pages/contest/ContestsPage.tsx";
 import ContestPage from "./pages/contest/ContestPage.tsx";
 import ContestLeaderboardPage from "./pages/contest/ContestLeaderboardPage.tsx";
+import ProblemsPage from "./pages/ProblemsPage.tsx";
+import RoadmapPage from "./pages/RoadmapPage.tsx";
 
 export default function App() {
   return (
     <AppFrame>
       <Routes>
         <Route path="/zone" element={<ArenaPage />} />
+        <Route path="/problems" element={<ProblemsPage />} />
         <Route path="/problems/:slug" element={<ProblemPage />} />
+        <Route path="/roadmap" element={<RoadmapPage />} />
         <Route path="/contest" element={<ContestsPage />} />
         <Route path="/contest/:id" element={<ContestPage />} />
         <Route path="/contest/:id/leaderboard" element={<ContestLeaderboardPage />} />
@@ -120,7 +124,7 @@ export default function App() {
           }
         />
         <Route path="/rating" element={<Navigate to="/leaderboard" replace />} />
-        <Route path="*" element={<Navigate to="/zone" replace />} />
+        <Route path="*" element={<Navigate to="/problems" replace />} />
       </Routes>
     </AppFrame>
   );

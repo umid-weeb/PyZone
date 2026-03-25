@@ -13,7 +13,9 @@
   "author": "Sizning Ismingiz",
   "license": "MIT",
   "dependencies": {
-    "python": "^0.0.4"
+    "python": "^0.0.4",
+    "react": "^19.2.4",
+    "react-router-dom": "^7.13.2"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",

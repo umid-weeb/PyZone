@@ -4,9 +4,11 @@ import UserQuickSearch from "../common/UserQuickSearch.jsx";
 import styles from "./DashboardShell.module.css";
 
 const navItems = [
-  { to: "/zone", label: "Arena" },
-  { to: "/profile", label: "Profile" },
+  { to: "/problems", label: "Problems" },
+  { to: "/roadmap", label: "Roadmap" },
+  { to: "/contest", label: "Contest" },
   { to: "/leaderboard", label: "Leaderboard" },
+  { to: "/profile", label: "Profile" },
   { to: "/profile/settings", label: "Settings" },
 ];
 
@@ -18,8 +20,8 @@ export default function DashboardShell({ eyebrow, title, subtitle, actions, chil
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.brand}>
-          <button className={styles.back} type="button" onClick={() => navigate("/zone")}>
-            Zone
+          <button className={styles.back} type="button" onClick={() => navigate("/problems")}>
+            Problems
           </button>
           <div>
             <div className={styles.eyebrow}>{eyebrow}</div>
