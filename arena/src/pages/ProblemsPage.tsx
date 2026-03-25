@@ -128,7 +128,7 @@ export default function ProblemsPage() {
       const params = new URLSearchParams();
       params.set("page", String(currentPage));
       params.set("per_page", String(perPage));
-      if (searchQuery) params.set("search", searchQuery);
+      if (searchQuery) params.set("q", searchQuery);
       if (difficultyFilter) params.set("difficulty", difficultyFilter);
       if (selectedTags.length > 0) params.set("tags", selectedTags.join(","));
 
@@ -407,7 +407,7 @@ export default function ProblemsPage() {
                       <tr
                         key={problem.id || problem.slug}
                         className="group cursor-pointer transition-colors hover:bg-white/5"
-                        onClick={() => navigate(`/zone?problem=${problem.slug}`)}
+                        onClick={() => navigate(`/problems/${problem.slug}`)}
                       >
                         <td className="px-4 py-3">
                           <StatusIcon solved={problem.is_solved} attempted={problem.is_attempted} />

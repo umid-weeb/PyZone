@@ -1,147 +1,65 @@
-from __future__ import annotations
-
-from datetime import datetime, timezone
-
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
 from sqlalchemy.orm import Session
-
 from app.database import get_db
-from app.models.contest import Contest, ContestProblem, ContestSubmission
-from app.models.problem import Problem
-from app.models.user import User
+from app.services.ws_manager import contest_ws_manager
+from app.models.contest import Contest, ContestStanding, ContestSubmission
+from datetime import datetime
 
+router = APIRouter(prefix="/api/contests", tags=["Contests"])
+ws_router = APIRouter(tags=["WebSockets"])
 
-router = APIRouter(tags=["contests"])
+@router.get("/{contest_id}/standings")
+def get_standings(contest_id: str, db: Session = Depends(get_db)):
+    standings = db.query(ContestStanding)\
+        .filter(ContestStanding.contest_id == contest_id)\
+        .order_by(ContestStanding.total_solved.desc(), ContestStanding.total_penalty.asc())\
+        .limit(100).all()
+    return {"standings": standings}
 
-
-def _status(now: datetime, starts_at: datetime | None, ends_at: datetime | None) -> str:
-    if starts_at and now < starts_at:
-        return "upcoming"
-    if ends_at and now >= ends_at:
-        return "finished"
-    if starts_at and (ends_at is None or now < ends_at):
-        return "running"
-    return "upcoming"
-
-
-@router.get("/contests")
-def list_contests(db: Session = Depends(get_db)) -> dict:
-    now = datetime.now(timezone.utc)
-    contests = db.query(Contest).order_by(Contest.starts_at.desc().nullslast(), Contest.created_at.desc()).limit(50).all()
-    return {
-        "items": [
-            {
-                "id": c.id,
-                "title": c.title,
-                "starts_at": c.starts_at.isoformat() if c.starts_at else None,
-                "ends_at": c.ends_at.isoformat() if c.ends_at else None,
-                "status": _status(now, c.starts_at, c.ends_at),
-            }
-            for c in contests
-        ]
-    }
-
-
-@router.get("/contests/{contest_id}")
-def get_contest(contest_id: str, db: Session = Depends(get_db)) -> dict:
+# Simulated submit endpoint triggered by the judge worker when a verdict arrives
+@router.post("/internal/{contest_id}/update-score")
+async def internal_update_score(contest_id: str, payload: dict, db: Session = Depends(get_db)):
+    user_id = payload["user_id"]
+    username = payload["username"]
+    is_accepted = payload["is_accepted"]
+    problem_id = payload["problem_id"]
+    wrong_attempts = payload.get("wrong_attempts", 0) # Fetched from previous submissions
+    
     contest = db.query(Contest).filter(Contest.id == contest_id).first()
     if not contest:
-        raise HTTPException(status_code=404, detail="Contest not found")
+        raise HTTPException(status_code=404)
 
-    rows = (
-        db.query(
-            ContestProblem.problem_id,
-            ContestProblem.sort_order,
-            Problem.slug,
-            Problem.title,
-            Problem.difficulty,
-        )
-        .join(Problem, Problem.id == ContestProblem.problem_id)
-        .filter(ContestProblem.contest_id == contest_id)
-        .order_by(ContestProblem.sort_order.asc())
-        .all()
-    )
+    standing = db.query(ContestStanding).filter_by(contest_id=contest_id, user_id=user_id).first()
+    if not standing:
+        standing = ContestStanding(contest_id=contest_id, user_id=user_id, username=username)
+        db.add(standing)
 
-    return {
-        "id": contest.id,
-        "title": contest.title,
-        "description": contest.description,
-        "starts_at": contest.starts_at.isoformat() if contest.starts_at else None,
-        "ends_at": contest.ends_at.isoformat() if contest.ends_at else None,
-        "problems": [
-            {
-                "problem_id": r.problem_id,
-                "problem_slug": r.slug,
-                "title": r.title,
-                "difficulty": r.difficulty,
-                "sort_order": int(r.sort_order or 0),
-            }
-            for r in rows
-        ],
-    }
+    # ICPC Scoring Logic
+    if is_accepted:
+        elapsed_minutes = int((datetime.utcnow() - contest.starts_at).total_seconds() / 60)
+        # 20 minutes penalty for each wrong attempt
+        penalty = elapsed_minutes + (wrong_attempts * 20) 
+        
+        standing.total_solved += 1
+        standing.total_penalty += penalty
+        standing.last_submit = datetime.utcnow()
+        db.commit()
 
+        # Real-time WebSockets update
+        await contest_ws_manager.broadcast(str(contest_id), {
+            "type": "standing_update",
+            "user_id": str(user_id),
+            "username": username,
+            "solved": standing.total_solved,
+            "penalty": standing.total_penalty
+        })
+    return {"status": "ok"}
 
-@router.get("/contests/{contest_id}/leaderboard")
-def contest_leaderboard(contest_id: str, db: Session = Depends(get_db)) -> dict:
-    contest = db.query(Contest).filter(Contest.id == contest_id).first()
-    if not contest:
-        raise HTTPException(status_code=404, detail="Contest not found")
-    if not contest.starts_at:
-        return {"items": []}
-
-    # ICPC-style: per problem, first Accepted counts; penalty = minutes since start at AC + 20 * wrong attempts.
-    submissions = (
-        db.query(
-            ContestSubmission.user_id,
-            User.username,
-            ContestSubmission.problem_id,
-            ContestSubmission.verdict,
-            ContestSubmission.created_at,
-        )
-        .join(User, User.id == ContestSubmission.user_id)
-        .filter(ContestSubmission.contest_id == contest_id)
-        .order_by(ContestSubmission.created_at.asc())
-        .all()
-    )
-
-    start = contest.starts_at
-    per_user: dict[int, dict] = {}
-    for row in submissions:
-        user_state = per_user.setdefault(
-            int(row.user_id),
-            {"username": row.username, "problems": {}, "solved": 0, "penalty": 0},
-        )
-        p = user_state["problems"].setdefault(
-            row.problem_id,
-            {"solved": False, "wrong": 0},
-        )
-        if p["solved"]:
-            continue
-
-        verdict = (row.verdict or "").strip()
-        if verdict == "Accepted":
-            p["solved"] = True
-            user_state["solved"] += 1
-            minutes = int(max(0, (row.created_at - start).total_seconds()) // 60)
-            user_state["penalty"] += minutes + 20 * int(p["wrong"])
-        else:
-            # Count wrong attempts only for non-null verdicts (queued/running excluded).
-            if verdict:
-                p["wrong"] += 1
-
-    rows = sorted(
-        per_user.values(),
-        key=lambda x: (-x["solved"], x["penalty"], x["username"].lower()),
-    )
-
-    return {
-        "items": [
-            {
-                "username": r["username"],
-                "solved": int(r["solved"]),
-                "penalty_minutes": int(r["penalty"]),
-            }
-            for r in rows
-        ]
-    }
-
+@ws_router.websocket("/ws/contest/{contest_id}")
+async def contest_websocket(websocket: WebSocket, contest_id: str):
+    await contest_ws_manager.connect(websocket, contest_id)
+    try:
+        while True:
+            data = await websocket.receive_text() # keep connection alive
+    except WebSocketDisconnect:
+        contest_ws_manager.disconnect(websocket, contest_id)

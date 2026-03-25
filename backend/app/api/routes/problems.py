@@ -23,6 +23,7 @@ async def list_problems(
     per_page: int = 200,
     q: str = "",
     tags: str = "",
+    difficulty: str = "",
     refresh: bool = False,
     service: ProblemService = Depends(get_problem_service),
 ) -> ProblemListResponse:
@@ -40,6 +41,7 @@ async def list_problems(
         per_page=per_page,
         query=q,
         tags=tag_items,
+        difficulty=difficulty,
         force_refresh=refresh,
     )
 
@@ -77,6 +79,7 @@ async def search_problems(
     page: int = 1,
     per_page: int = 200,
     tags: str = "",
+    difficulty: str = "",
     service: ProblemService = Depends(get_problem_service),
 ) -> ProblemListResponse:
     """Enhanced search endpoint for problems with better query handling"""
@@ -89,6 +92,7 @@ async def search_problems(
         per_page=per_page,
         query=q.strip(),
         tags=tag_items,
+        difficulty=difficulty,
         force_refresh=False,
     )
     

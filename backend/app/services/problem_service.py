@@ -66,11 +66,13 @@ class ProblemService:
         per_page: int = 200,
         query: str = "",
         tags: list[str] | None = None,
+        difficulty: str | None = None,
         force_refresh: bool = False,
     ) -> dict[str, Any]:
         all_items = await self.list_problems(force_refresh=force_refresh)
         normalized_query = query.strip().lower()
         normalized_tags = [tag.strip().lower() for tag in (tags or []) if tag.strip()]
+        normalized_difficulty = (difficulty or "").strip().lower()
 
         filtered = []
         for item in all_items:
@@ -88,7 +90,11 @@ class ProblemService:
                 tag in [problem_tag.lower() for problem_tag in item.tags]
                 for tag in normalized_tags
             )
-            if matches_query and matches_tags:
+            matches_difficulty = (
+                not normalized_difficulty
+                or str(item.difficulty or "").strip().lower() == normalized_difficulty
+            )
+            if matches_query and matches_tags and matches_difficulty:
                 filtered.append(item)
 
         total = len(filtered)

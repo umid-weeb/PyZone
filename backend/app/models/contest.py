@@ -1,64 +1,46 @@
-from __future__ import annotations
-
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
-from sqlalchemy.orm import relationship
-
+import uuid
+from datetime import datetime
+from sqlalchemy import Column, String, Integer, Boolean, DateTime, ForeignKey, Text
+from sqlalchemy.dialects.postgresql import UUID
 from app.database import Base
-
 
 class Contest(Base):
     __tablename__ = "contests"
-
-    id = Column(String(64), primary_key=True, index=True)  # slug-like id
-    title = Column(String(255), nullable=False)
-    description = Column(Text, nullable=True)
-    starts_at = Column(DateTime(timezone=True), nullable=True)
-    ends_at = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
-    problems = relationship(
-        "ContestProblem",
-        back_populates="contest",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-        order_by="ContestProblem.sort_order.asc()",
-    )
-
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    title = Column(String, nullable=False)
+    starts_at = Column(DateTime(timezone=True), nullable=False)
+    ends_at = Column(DateTime(timezone=True), nullable=False)
+    is_rated = Column(Boolean, default=False)
 
 class ContestProblem(Base):
     __tablename__ = "contest_problems"
+    contest_id = Column(UUID(as_uuid=True), ForeignKey("contests.id", ondelete="CASCADE"), primary_key=True)
+    problem_id = Column(String, nullable=False, primary_key=True) # Problem slug or ID
+    points = Column(Integer, default=100)
+    order_num = Column(Integer, nullable=False)
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    contest_id = Column(String(64), ForeignKey("contests.id", ondelete="CASCADE"), index=True, nullable=False)
-    problem_id = Column(String(36), ForeignKey("problems.id", ondelete="RESTRICT"), index=True, nullable=False)
-    sort_order = Column(Integer, nullable=False, default=0)
-
-    contest = relationship("Contest", back_populates="problems")
-
-    __table_args__ = (UniqueConstraint("contest_id", "problem_id", name="uq_contest_problem"),)
-
-
-class ContestEntry(Base):
-    __tablename__ = "contest_entries"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    contest_id = Column(String(64), ForeignKey("contests.id", ondelete="CASCADE"), index=True, nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
-    joined_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
-    __table_args__ = (UniqueConstraint("contest_id", "user_id", name="uq_contest_entry"),)
-
+class ContestRegistration(Base):
+    __tablename__ = "contest_registrations"
+    contest_id = Column(UUID(as_uuid=True), ForeignKey("contests.id", ondelete="CASCADE"), primary_key=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    registered_at = Column(DateTime(timezone=True), default=datetime.utcnow)
 
 class ContestSubmission(Base):
     __tablename__ = "contest_submissions"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    contest_id = Column(UUID(as_uuid=True), ForeignKey("contests.id", ondelete="CASCADE"))
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
+    problem_id = Column(String, nullable=False)
+    penalty_minutes = Column(Integer, default=0)
+    is_first_solve = Column(Boolean, default=False)
+    is_accepted = Column(Boolean, default=False)
+    submitted_at = Column(DateTime(timezone=True), default=datetime.utcnow)
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    contest_id = Column(String(64), ForeignKey("contests.id", ondelete="CASCADE"), index=True, nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
-    problem_id = Column(String(36), ForeignKey("problems.id", ondelete="RESTRICT"), index=True, nullable=False)
-    submission_id = Column(String(64), nullable=False, index=True)
-    verdict = Column(String(64), nullable=True)
-    runtime_ms = Column(Integer, nullable=True)
-    memory_kb = Column(Integer, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
+class ContestStanding(Base):
+    __tablename__ = "contest_standings"
+    contest_id = Column(UUID(as_uuid=True), ForeignKey("contests.id", ondelete="CASCADE"), primary_key=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    username = Column(String, nullable=False)
+    total_solved = Column(Integer, default=0)
+    total_penalty = Column(Integer, default=0) # ICPC format penalty in minutes
+    last_submit = Column(DateTime(timezone=True))
